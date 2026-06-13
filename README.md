@@ -116,7 +116,7 @@ External APIs  (SteamSpy, Steam Community, IsThereAnyDeal)
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/steam-lite.git
+git clone https://github.com/gihan-aj/steam-lite.git
 cd steam-lite
 
 # Install frontend dependencies
