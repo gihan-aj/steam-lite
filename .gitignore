@@ -26,10 +26,5 @@ dist-ssr
 .continue/config.yaml
 .vscode/mcp.json
 
-# Database files
-steam-lite.db
-steam-lite.db-shm
-steam-lite.db-wal
-
 
 
