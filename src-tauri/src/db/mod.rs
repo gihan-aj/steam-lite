@@ -1,4 +1,9 @@
-﻿use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+﻿pub mod game_repository;
+pub mod price_repository;
+pub mod wishlist_repository;
+pub mod settings_repository;
+
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use crate::error::Result;
 
 /// Initialises the database connection pool and runs any pending migrations.

@@ -6,15 +6,25 @@ mod db;
 mod models;
 mod error;
 
-use commands::*; // Bring all public command functions into scope
 pub use error::{AppError, Result};
+
+// use std::sync::Arc;
+use sqlx::SqlitePool;
 use tauri::Manager;
 
-use std::sync::Arc;
-use sqlx::SqlitePool;
+use db::{
+    game_repository::GameRepository,
+    price_repository::PriceRepository,
+    wishlist_repository::WishlistRepository,
+    settings_repository::SettingsRepository,
+};
 
 pub struct AppState{
     pub db: SqlitePool,
+    pub games: GameRepository,
+    pub prices: PriceRepository,
+    pub wishlist: WishlistRepository,
+    pub settings: SettingsRepository,
 }
 
 #[tauri::command]
@@ -45,7 +55,14 @@ pub fn run() {
             });
 
             // Register the pool in Tauri's state container
-            app.manage(AppState { db: db_pool });
+            let state = AppState {
+                games:    GameRepository::new(db_pool.clone()),
+                prices:   PriceRepository::new(db_pool.clone()),
+                wishlist: WishlistRepository::new(db_pool.clone()),
+                settings: SettingsRepository::new(db_pool.clone()),
+                db:       db_pool,
+            };
+            app.manage(state);
 
             Ok(())
         })
