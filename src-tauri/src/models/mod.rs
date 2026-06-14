@@ -98,17 +98,17 @@ impl From<GameRow> for Game {
 /// not stored in the database.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecommendedGame {
-    pub app_id: u32,
+    pub app_id: i64,
     pub name: String,
-    pub review_score: f32,
-    pub total_reviews: u32,
-    pub price_current: Option<i32>,
-    pub price_original: Option<i32>,
+    pub review_score: f64,
+    pub total_reviews: i64,
+    pub price_current: Option<i64>,
+    pub price_original: Option<i64>,
     pub tags: Vec<String>,
  
     /// Our calculated score — higher is better.
     /// Combines review score (60%), review count (30%), recency (10%).
-    pub recommendation_score: f32,
+    pub recommendation_score: f64,
  
     /// Human-readable discount string e.g. "-75%"
     pub discount_label: Option<String>,
