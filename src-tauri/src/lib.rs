@@ -19,12 +19,15 @@ use db::{
     settings_repository::SettingsRepository,
 };
 
+use crate::api::steamspy::SteamSpyClient;
+
 pub struct AppState{
     pub db: SqlitePool,
     pub games: GameRepository,
     pub prices: PriceRepository,
     pub wishlist: WishlistRepository,
     pub settings: SettingsRepository,
+    pub steamspy: SteamSpyClient,
 }
 
 #[tauri::command]
@@ -60,6 +63,7 @@ pub fn run() {
                 prices:   PriceRepository::new(db_pool.clone()),
                 wishlist: WishlistRepository::new(db_pool.clone()),
                 settings: SettingsRepository::new(db_pool.clone()),
+                steamspy: SteamSpyClient::new(),
                 db:       db_pool,
             };
             app.manage(state);
