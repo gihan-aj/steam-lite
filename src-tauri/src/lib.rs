@@ -72,7 +72,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            commands::games::get_reccomended_games,
+            commands::games::get_recommended_games,
             commands::games::sync_games,
             commands::games::get_game_details,
         ])

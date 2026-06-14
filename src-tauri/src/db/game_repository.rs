@@ -38,7 +38,7 @@ impl GameRepository {
                     last_updated as "last_updated: chrono::DateTime<chrono::Utc>"
                 FROM games
                 WHERE review_score >= ?
-                AND is_indie = 1
+                AND is_indie = 0
                 AND platform_windows = 1
                 ORDER BY review_score DESC
                 LIMIT ?
