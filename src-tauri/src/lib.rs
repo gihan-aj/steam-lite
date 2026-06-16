@@ -20,6 +20,7 @@ use db::{
 };
 
 use crate::api::steamspy::SteamSpyClient;
+use crate::api::steam::SteamClient;
 
 pub struct AppState{
     pub db: SqlitePool,
@@ -28,11 +29,7 @@ pub struct AppState{
     pub wishlist: WishlistRepository,
     pub settings: SettingsRepository,
     pub steamspy: SteamSpyClient,
-}
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+    pub steam: SteamClient,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -64,6 +61,7 @@ pub fn run() {
                 wishlist: WishlistRepository::new(db_pool.clone()),
                 settings: SettingsRepository::new(db_pool.clone()),
                 steamspy: SteamSpyClient::new(),
+                steam:    SteamClient::new(), 
                 db:       db_pool,
             };
             app.manage(state);
@@ -71,10 +69,15 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             commands::games::get_recommended_games,
             commands::games::sync_games,
             commands::games::get_game_details,
+            commands::settings::get_settings,
+            commands::settings::set_setting,
+            commands::settings::save_settings,
+            commands::wishlist::fetch_wishlist,
+            commands::wishlist::get_wishlist, 
+            commands::wishlist::remove_from_wishlist,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

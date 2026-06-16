@@ -208,6 +208,9 @@ pub struct UserSettings {
     /// The user's Steam ID (64-bit numeric string)
     /// e.g. "76561198012345678"
     pub steam_id:               Option<String>,
+
+    /// The user's Steam API key (required for some features)
+    pub steam_api_key:          Option<String>,
  
     /// Minimum review score % to show in recommendations (default: 90)
     pub min_review_score:       f64,
@@ -232,7 +235,8 @@ impl UserSettings {
 impl Default for UserSettings {
     fn default() -> Self {
         UserSettings {
-            steam_id: None,          // User hasn't entered their Steam ID yet
+            steam_id: None,  
+            steam_api_key: None,
             min_review_score: 90.0,
             min_discount_percent: 50,
             sync_interval_hours: 24,
@@ -245,18 +249,18 @@ impl Default for UserSettings {
 // UTILITY FUNCTIONS
 // ─────────────────────────────────────────────
 /// Helper to convert a price in cents to a display string.
-pub fn format_price(cents: i32) -> String {
+pub fn format_price(cents: i64) -> String {
     if cents == 0 {
         "Free".to_string()
     } else {
-        format!("${:.2}", cents as f32 / 100.0)
+        format!("${:.2}", cents as f64 / 100.0)
     }
 }
  
 /// Calculate discount percentage given original and current price.
-pub fn calculate_discount(original: i32, current: i32) -> i32 {
+pub fn calculate_discount(original: i64, current: i64) -> i64 {
     if original == 0 {
         return 0;
     }
-    (((original - current) as f32 / original as f32) * 100.0) as i32
+    (((original - current) as f64 / original as f64) * 100.0) as i64
 }

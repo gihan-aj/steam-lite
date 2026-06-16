@@ -45,6 +45,7 @@ export interface BuyRecommendation {
 
 export interface UserSettings {
   steam_id: string | null;
+  steam_api_key: string | null;
   min_review_score: number;
   min_discount_percent: number;
   sync_interval_hours: number;

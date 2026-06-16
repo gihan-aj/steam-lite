@@ -40,11 +40,16 @@ impl SettingsRepository {
             .and_then(|r| r.value.parse::<i64>().ok())
             .unwrap_or(50);
 
+        let steam_api_key = get("steam_api_key").await?
+           .map(|r| r.value)
+           .filter(|v| !v.is_empty());
+
         let steam_id = get("steam_id").await?
             .map(|r| r.value);
 
         Ok(UserSettings {
             steam_id,
+            steam_api_key,
             min_review_score: min_score,
             min_discount_percent: min_discount,
             sync_interval_hours: sync_interval,
@@ -74,6 +79,9 @@ impl SettingsRepository {
         // If it's None, the block is skipped entirely.
         if let Some(id) = &settings.steam_id {
             self.set("steam_id", id).await?;
+        }
+        if let Some(key) = &settings.steam_api_key {
+            self.set("steam_api_key", key).await?;
         }
 
         self.set("min_review_score", &settings.min_review_score.to_string()).await?;
