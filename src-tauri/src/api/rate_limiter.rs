@@ -144,6 +144,7 @@ impl RateLimiter {
                 match guard.try_consume() {
                     Ok(()) => {
                         // Got a token - proceed immediately
+                        println!("[RateLimit] {} — got token, proceeding immediately", self.name);
                         return;
                     }
                     Err(wait_time) => wait_time,

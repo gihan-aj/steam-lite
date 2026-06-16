@@ -340,6 +340,7 @@ impl SteamClient{
         country_code: &str,
         limiter: &RateLimiter,
     ) -> Result<Vec<(i64, i64, AppDetails)>>{
+        limiter.acquire().await;
         // Get all wishlist app IDs
         let mut items = self.get_wishlist_ids(steam_id, api_key).await?;
         // Sort by priority (user's wishlist order)
@@ -373,7 +374,7 @@ impl SteamClient{
             
             // Small delay between requests — Steam rate limit is generous
             // but we want to be a good citizen
-            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            // tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
 
         println!("[INFO] Got details for {}/{} wishlist games", result.len(), items.len());
