@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use reqwest::Client;
 use serde::{Deserialize};
 use crate::error::{AppError, Result};
+use crate::api::rate_limiter::RateLimiter;
 
 // ─────────────────────────────────────────────
 // API RESPONSE TYPES
@@ -158,13 +159,13 @@ impl SteamSpyClient{
 
     /// Fetch the top 100 most-played games in the last two weeks.
     /// Great for discovering what's popular right now.
-    pub async fn get_top100_in_2weeks(&self) -> Result<Vec<SteamSpyGame>> {
-        self.fetch_list("top100in2weeks", &[]).await
+    pub async fn get_top100_in_2weeks(&self, limiter: &RateLimiter,) -> Result<Vec<SteamSpyGame>> {
+        self.fetch_list("top100in2weeks", &[], limiter).await
     }
 
     /// Fetch the top 100 most-played games of all time.
-    pub async fn get_top100_forever(&self) -> Result<Vec<SteamSpyGame>> {
-        self.fetch_list("top100forever", &[]).await
+    pub async fn get_top100_forever(&self, limiter: &RateLimiter,) -> Result<Vec<SteamSpyGame>> {
+        self.fetch_list("top100forever", &[], limiter).await
     }
 
     /// Fetch detailed data for a single game by its Steam App ID.
@@ -195,9 +196,9 @@ impl SteamSpyClient{
 
     /// Fetch one page of all games on Steam (1000 per page, starts at page 0).
     /// Rate limit: 1 request per MINUTE for this endpoint.
-    pub async fn get_all_page(&self, page: u32) -> Result<Vec<SteamSpyGame>> {
+    pub async fn get_all_page(&self, page: u32, limiter: &RateLimiter,) -> Result<Vec<SteamSpyGame>> {
         let page_str = page.to_string();
-        self.fetch_list("all", &[("page", &page_str)]).await
+        self.fetch_list("all", &[("page", &page_str)], limiter).await
     }
 
     // ─────────────────────────────────────────────
@@ -213,7 +214,9 @@ impl SteamSpyClient{
         &self,
         request_type: &str,
         extra_params: &[(&str, &str)],
+        limiter: &RateLimiter
     ) -> Result<Vec<SteamSpyGame>> {
+        limiter.acquire().await;
         // Build query params: always include `request`, then any extras
         let mut params = vec![("request", request_type)];
         params.extend_from_slice(extra_params);

@@ -30,7 +30,13 @@ pub async fn fetch_wishlist(
     println!("[INFO] Fetching wishlist for Steam ID: {}", steam_id);
 
     // Fetch from Steam
-    let raw_items = state.steam.get_full_wishlist(&steam_id, &api_key, &country_code).await?;
+    let raw_items = state.steam
+        .get_full_wishlist(
+            &steam_id, 
+            &api_key, 
+            &country_code,
+            &state.limits.steam_store
+        ).await?;
 
     let mut wishlist_items: Vec<WishlistItem> = Vec::new();
 

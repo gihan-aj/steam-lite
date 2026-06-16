@@ -85,7 +85,7 @@ pub async fn get_game_details(
 /// Fetches top 100 from SteamSpy, converts and stores them all.
 async fn sync_games_internal(state: &AppState) -> Result<usize, AppError> {
     // Fetch top 100 from the last 2 weeks — fresh, relevant games
-    let spy_games = state.steamspy.get_top100_in_2weeks().await?;
+    let spy_games = state.steamspy.get_top100_in_2weeks(&state.limits.steam_store).await?;
     println!("[DEBUG] SteamSpy returned {} games", spy_games.len());
 
     // Print what the first game looks like raw

@@ -21,6 +21,7 @@ use db::{
 
 use crate::api::steamspy::SteamSpyClient;
 use crate::api::steam::SteamClient;
+use api::rate_limiter::ApiRateLimiters;
 
 pub struct AppState{
     pub db: SqlitePool,
@@ -30,6 +31,7 @@ pub struct AppState{
     pub settings: SettingsRepository,
     pub steamspy: SteamSpyClient,
     pub steam: SteamClient,
+    pub limits:   ApiRateLimiters,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -62,6 +64,7 @@ pub fn run() {
                 settings: SettingsRepository::new(db_pool.clone()),
                 steamspy: SteamSpyClient::new(),
                 steam:    SteamClient::new(), 
+                limits:   ApiRateLimiters::new(),
                 db:       db_pool,
             };
             app.manage(state);

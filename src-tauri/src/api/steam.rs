@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use reqwest::Client;
 use serde::{Deserialize, Serialize, de};
 use crate::error::{AppError, Result};
+use crate::api::rate_limiter::RateLimiter;
 
 // Two separate Steam endpoints:
 //   1. Wishlist data  — store.steampowered.com/wishlist/profiles/{id}/wishlistdata/
@@ -337,6 +338,7 @@ impl SteamClient{
         steam_id: &str,
         api_key: &str,
         country_code: &str,
+        limiter: &RateLimiter,
     ) -> Result<Vec<(i64, i64, AppDetails)>>{
         // Get all wishlist app IDs
         let mut items = self.get_wishlist_ids(steam_id, api_key).await?;
@@ -351,6 +353,10 @@ impl SteamClient{
         // We do them one at a time with a small delay to be respectful of rate limits
         // For a wishlist of ~50 games this takes ~10 seconds total
         for item in &items {
+            // 🦀 Acquire a rate limit token BEFORE each API call
+            // If we're going too fast, this will sleep automatically
+            limiter.acquire().await;
+
             match self.get_app_details(item.appid, country_code).await {
                 Ok(Some(details)) => {
                     result.push((item.appid, item.date_added, details));
@@ -381,6 +387,8 @@ impl SteamClient{
         app_id: i64,
         country_code: &str,
     ) -> Result<Option<AppDetails>> {
+        // Note: caller is responsible for rate limiting
+        // get_app_details itself is intentionally dumb — just HTTP
         let url = format!(
             "https://store.steampowered.com/api/appdetails?appids={}&cc={}&filters=basic,genres,price_overview,categories",
             app_id, country_code
