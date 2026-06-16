@@ -1,0 +1,1 @@
+INSERT OR IGNORE INTO user_settings (key, value) VALUES ('itad_api_key', '');

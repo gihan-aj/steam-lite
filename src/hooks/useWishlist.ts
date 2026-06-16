@@ -23,3 +23,14 @@ export function useFetchWishlist() {
     },
   });
 }
+
+export function useEnrichWishlist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => invoke<WishlistItem[]>("enrich_wishlist_prices"),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["wishlist"], data);
+    },
+  });
+}

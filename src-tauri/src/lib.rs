@@ -19,6 +19,7 @@ use db::{
     settings_repository::SettingsRepository,
 };
 
+use crate::api::itad::ItadClient;
 use crate::api::steamspy::SteamSpyClient;
 use crate::api::steam::SteamClient;
 use api::rate_limiter::ApiRateLimiters;
@@ -31,6 +32,7 @@ pub struct AppState{
     pub settings: SettingsRepository,
     pub steamspy: SteamSpyClient,
     pub steam: SteamClient,
+    pub itad: ItadClient,
     pub limits:   ApiRateLimiters,
 }
 
@@ -64,6 +66,7 @@ pub fn run() {
                 settings: SettingsRepository::new(db_pool.clone()),
                 steamspy: SteamSpyClient::new(),
                 steam:    SteamClient::new(), 
+                itad:     ItadClient::new(),
                 limits:   ApiRateLimiters::new(),
                 db:       db_pool,
             };
@@ -81,6 +84,7 @@ pub fn run() {
             commands::wishlist::fetch_wishlist,
             commands::wishlist::get_wishlist, 
             commands::wishlist::remove_from_wishlist,
+            commands::wishlist::enrich_wishlist_prices,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

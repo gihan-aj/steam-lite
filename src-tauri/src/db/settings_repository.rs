@@ -47,9 +47,14 @@ impl SettingsRepository {
         let steam_id = get("steam_id").await?
             .map(|r| r.value);
 
+        let itad_api_key = get("itad_api_key").await?
+            .map(|r| r.value)
+            .filter(|v| !v.is_empty());
+
         Ok(UserSettings {
             steam_id,
             steam_api_key,
+            itad_api_key,
             min_review_score: min_score,
             min_discount_percent: min_discount,
             sync_interval_hours: sync_interval,
@@ -82,6 +87,9 @@ impl SettingsRepository {
         }
         if let Some(key) = &settings.steam_api_key {
             self.set("steam_api_key", key).await?;
+        }
+        if let Some(key) = &settings.itad_api_key {
+            self.set("itad_api_key", key).await?;
         }
 
         self.set("min_review_score", &settings.min_review_score.to_string()).await?;

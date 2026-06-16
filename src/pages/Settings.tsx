@@ -10,6 +10,7 @@ export function Settings() {
   const [form, setForm] = useState<UserSettings>({
     steam_id: null,
     steam_api_key: null,
+    itad_api_key: null,
     min_review_score: 90,
     min_discount_percent: 50,
     sync_interval_hours: 24,
@@ -115,8 +116,8 @@ export function Settings() {
                     style={{ color: "#3d6ef8" }}
                   >
                     steamcommunity.com/dev/apikey
-                  </a>
-                  {" "}— use "localhost" as the domain name.
+                  </a>{" "}
+                  — use "localhost" as the domain name.
                 </>
               }
             >
@@ -124,10 +125,12 @@ export function Settings() {
                 type="password"
                 placeholder="32-character hex key"
                 value={form.steam_api_key ?? ""}
-                onChange={e => setForm(f => ({
-                  ...f,
-                  steam_api_key: e.target.value || null,
-                }))}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    steam_api_key: e.target.value || null,
+                  }))
+                }
                 style={{
                   width: "100%",
                   background: "#1c1e27",
@@ -138,8 +141,50 @@ export function Settings() {
                   fontSize: 13,
                   outline: "none",
                 }}
-                onFocus={e => e.target.style.borderColor = "#3d6ef8"}
-                onBlur={e => e.target.style.borderColor = "#2a2d3a"}
+                onFocus={(e) => (e.target.style.borderColor = "#3d6ef8")}
+                onBlur={(e) => (e.target.style.borderColor = "#2a2d3a")}
+              />
+            </Field>
+
+            <Field
+              label="IsThereAnyDeal API Key"
+              description={
+                <>
+                  Free key from{" "}
+                  <a
+                    href="https://isthereanydeal.com/apps/my/"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#3d6ef8" }}
+                  >
+                    isthereanydeal.com/apps/my
+                  </a>{" "}
+                  — register a free app to get your key.
+                </>
+              }
+            >
+              <input
+                type="password"
+                placeholder="ITAD API key"
+                value={form.itad_api_key ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    itad_api_key: e.target.value || null,
+                  }))
+                }
+                style={{
+                  width: "100%",
+                  background: "#1c1e27",
+                  border: "1px solid #2a2d3a",
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  color: "#e0e2e8",
+                  fontSize: 13,
+                  outline: "none",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#3d6ef8")}
+                onBlur={(e) => (e.target.style.borderColor = "#2a2d3a")}
               />
             </Field>
 

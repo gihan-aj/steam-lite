@@ -1,5 +1,9 @@
 // src/pages/Wishlist.tsx
-import { useWishlist, useFetchWishlist } from "../hooks/useWishlist";
+import {
+  useWishlist,
+  useFetchWishlist,
+  useEnrichWishlist,
+} from "../hooks/useWishlist";
 import { useSettings } from "../hooks/useSettings";
 import { WishlistItem, formatPrice } from "../types";
 
@@ -7,6 +11,7 @@ export function Wishlist() {
   const { data: settings } = useSettings();
   const { data: items, isLoading } = useWishlist();
   const fetch = useFetchWishlist();
+  const enrich = useEnrichWishlist();
 
   const hasSteamId = !!settings?.steam_id;
 
@@ -51,6 +56,24 @@ export function Wishlist() {
           }}
         >
           {fetch.isPending ? "Fetching…" : "↻ Sync wishlist"}
+        </button>
+
+        <button
+          onClick={() => enrich.mutate()}
+          disabled={enrich.isPending || !hasSteamId}
+          style={{
+            background: "transparent",
+            color: "#3d6ef8",
+            border: "1px solid #3d6ef8",
+            borderRadius: 8,
+            padding: "7px 14px",
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: enrich.isPending ? "not-allowed" : "pointer",
+            opacity: enrich.isPending ? 0.7 : 1,
+          }}
+        >
+          {enrich.isPending ? "Fetching prices…" : "★ Enrich prices"}
         </button>
       </div>
 

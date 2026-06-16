@@ -223,6 +223,9 @@ pub struct UserSettings {
 
     /// The user's Steam API key (required for some features)
     pub steam_api_key:          Option<String>,
+
+    /// Is There Any Deal API key (optional for some features)
+    pub itad_api_key:           Option<String>,
  
     /// Minimum review score % to show in recommendations (default: 90)
     pub min_review_score:       f64,
@@ -249,6 +252,7 @@ impl Default for UserSettings {
         UserSettings {
             steam_id: None,  
             steam_api_key: None,
+            itad_api_key: None,
             min_review_score: 90.0,
             min_discount_percent: 50,
             sync_interval_hours: 24,
