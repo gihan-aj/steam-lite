@@ -108,7 +108,13 @@ export function Wishlist() {
         )}
 
         {items && items.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
             {items.map((item) => (
               <WishlistCard key={item.app_id} item={item} />
             ))}
@@ -130,92 +136,222 @@ function WishlistCard({ item }: { item: WishlistItem }) {
         : "#9096a8";
 
   return (
-    <div
+    <article
       style={{
         background: "#1c1e27",
         border: "1px solid #242736",
-        borderRadius: 10,
-        padding: "12px 16px",
+        borderRadius: 12,
+        overflow: "hidden",
         display: "flex",
-        alignItems: "center",
-        gap: 16,
-        transition: "border-color 0.15s",
+        flexDirection: "column",
+        transition: "border-color 0.15s, transform 0.15s",
+        cursor: "pointer",
       }}
-      onMouseEnter={(e) =>
-        ((e.currentTarget as HTMLElement).style.borderColor = "#3d6ef8AA")
-      }
-      onMouseLeave={(e) =>
-        ((e.currentTarget as HTMLElement).style.borderColor = "#242736")
-      }
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.borderColor = "#3d6ef8AA";
+        el.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.borderColor = "#242736";
+        el.style.transform = "translateY(0)";
+      }}
     >
-      {/* Game name + review */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Header image */}
+      <div style={{ position: "relative", height: 120, flexShrink: 0 }}>
+        {item.header_image ? (
+          <img
+            src={item.header_image}
+            alt={item.name}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : (
+          // Fallback gradient when no image
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              background: "linear-gradient(135deg, #1e2540 0%, #1a1d28 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 32,
+              color: "#3d6ef8",
+              fontWeight: 700,
+              opacity: 0.4,
+            }}
+          >
+            {item.name.charAt(0)}
+          </div>
+        )}
+
+        {/* Discount badge over image */}
+        {hasDiscount && (
+          <div
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              background: "#16a34a",
+              color: "#dcfce7",
+              fontSize: 12,
+              fontWeight: 700,
+              padding: "3px 8px",
+              borderRadius: 6,
+            }}
+          >
+            -{item.discount_percent}%
+          </div>
+        )}
+
+        {/* Dark gradient overlay at bottom of image — lets text overlay look clean */}
         <div
           style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 48,
+            background: "linear-gradient(to top, #1c1e27 0%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* Card body */}
+      <div
+        style={{
+          padding: "10px 14px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          flex: 1,
+        }}
+      >
+        {/* Game name */}
+        <h3
+          style={{
             fontSize: 14,
-            fontWeight: 500,
+            fontWeight: 600,
             color: "#e0e2e8",
-            marginBottom: 3,
+            lineHeight: 1.3,
+            margin: 0,
           }}
         >
           {item.name}
-        </div>
+        </h3>
+
+        {/* Short description */}
+        {item.short_description && (
+          <p
+            style={{
+              fontSize: 11,
+              color: "#6b7280",
+              lineHeight: 1.5,
+              margin: 0,
+              // Clamp to 2 lines
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as const,
+              overflow: "hidden",
+            }}
+          >
+            {item.short_description}
+          </p>
+        )}
+
+        {/* Review score */}
         {item.review_summary && (
-          <div style={{ fontSize: 11, color: scoreColor }}>
-            {item.review_summary}
-            {item.reviews_percent ? ` · ${item.reviews_percent}%` : ""}
-            {item.reviews_total
-              ? ` (${item.reviews_total.toLocaleString()})`
-              : ""}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: scoreColor,
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: 11, color: scoreColor }}>
+              {item.review_summary}
+            </span>
           </div>
         )}
-      </div>
 
-      {/* Price block */}
-      <div style={{ textAlign: "right", flexShrink: 0 }}>
-        {hasDiscount ? (
-          <>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                justifyContent: "flex-end",
-              }}
-            >
+        {/* Spacer pushes price to bottom */}
+        <div style={{ flex: 1 }} />
+
+        {/* Price row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 4,
+            paddingTop: 8,
+            borderTop: "1px solid #242736",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {hasDiscount && item.original_price ? (
+              <>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "#5a5f72",
+                    textDecoration: "line-through",
+                  }}
+                >
+                  {formatPrice(item.original_price)}
+                </span>
+                <span
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "#4ade80",
+                  }}
+                >
+                  {formatPrice(item.current_price)}
+                </span>
+              </>
+            ) : (
               <span
                 style={{
-                  background: "#16a34a",
-                  color: "#dcfce7",
-                  fontSize: 11,
+                  fontSize: 15,
                   fontWeight: 700,
-                  padding: "1px 6px",
+                  color: "#e0e2e8",
+                }}
+              >
+                {formatPrice(item.current_price)}
+              </span>
+            )}
+          </div>
+
+          {/* Historical low badge — when we have it */}
+          {item.historical_low &&
+            item.current_price &&
+            item.current_price <= item.historical_low && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#fbbf24",
+                  background: "#2d1f02",
+                  border: "1px solid #78350f",
+                  padding: "2px 6px",
                   borderRadius: 4,
                 }}
               >
-                -{item.discount_percent}%
+                ★ Lowest ever
               </span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e2e8" }}>
-                {formatPrice(item.current_price)}
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "#5a5f72",
-                textDecoration: "line-through",
-                marginTop: 2,
-              }}
-            >
-              {formatPrice(item.original_price ?? item.current_price)}
-            </div>
-          </>
-        ) : (
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e2e8" }}>
-            {item.current_price ? formatPrice(item.current_price) : "Free"}
-          </span>
-        )}
+            )}
+        </div>
       </div>
-    </div>
+    </article>
   );
 }

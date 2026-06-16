@@ -48,6 +48,12 @@ pub async fn fetch_wishlist(
             .as_ref()
             .map(|p| p.discount_percent);
 
+        let header_image = Some(details.header_image.clone())
+            .filter(|s| !s.is_empty());
+
+        let short_description = Some(details.short_description.clone())
+            .filter(|s| !s.is_empty());
+
         let item = WishlistItem {
             app_id: *app_id,
             name: details.name.clone(),
@@ -60,6 +66,8 @@ pub async fn fetch_wishlist(
             historical_low: None,
             discount_percent,
             buy_recommendation: None,
+            header_image,
+            short_description
         };
 
         // Save to local DB

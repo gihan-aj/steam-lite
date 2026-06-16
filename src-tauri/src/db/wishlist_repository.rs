@@ -25,7 +25,9 @@ impl WishlistRepository {
                 current_price,
                 original_price,
                 historical_low,
-                discount_percent
+                discount_percent,
+                header_image,
+                short_description
             FROM wishlist
             ORDER BY name ASC
             "#
@@ -44,8 +46,8 @@ impl WishlistRepository {
             INSERT OR REPLACE INTO wishlist (
                 app_id, name, review_summary, reviews_percent,
                 reviews_total, date_added, current_price, original_price,
-                historical_low, discount_percent, last_checked
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                historical_low, discount_percent, header_image, short_description, last_checked
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
             item.app_id,
             item.name,
@@ -56,7 +58,9 @@ impl WishlistRepository {
             item.current_price,
             item.original_price,
             item.historical_low,
-            item.discount_percent
+            item.discount_percent,
+            item.header_image,
+            item.short_description
         )
         .execute(&self.pool)
         .await?;

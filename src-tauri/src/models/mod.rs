@@ -30,6 +30,8 @@ pub struct WishlistRow {
     pub original_price:   Option<i64>,
     pub historical_low:   Option<i64>,
     pub discount_percent: Option<i64>,
+    pub header_image:     Option<String>,
+    pub short_description:Option<String>,
 }
 
 /// Raw database row for the `price_history` table.
@@ -144,6 +146,9 @@ pub struct WishlistItem {
  
     /// Our prediction on whether to buy now or wait
     pub buy_recommendation: Option<BuyRecommendation>,
+
+    pub header_image:       Option<String>,
+    pub short_description:  Option<String>,
 }
 
 impl From<WishlistRow> for WishlistItem {
@@ -160,6 +165,8 @@ impl From<WishlistRow> for WishlistItem {
             historical_low:     row.historical_low,
             discount_percent:   row.discount_percent,
             buy_recommendation: None, // filled in by the service layer later
+            header_image:       row.header_image,
+            short_description:  row.short_description,
         }
     }
 }

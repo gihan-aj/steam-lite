@@ -35,6 +35,8 @@ export interface WishlistItem {
   historical_low: number | null;
   discount_percent: number | null;
   buy_recommendation: BuyRecommendation | null;
+  header_image: string | null;
+  short_description: string | null;
 }
 
 export interface BuyRecommendation {

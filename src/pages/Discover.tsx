@@ -13,18 +13,17 @@ export function Discover() {
     const sync = useSyncGames();
 
     return (
-      <div
-        className="flex flex-col h-full"
-        style={{
-          paddingLeft: "0.5rem",
-          paddingRight: "0.5rem",
-        }}
-      >
+      <div className="flex flex-col h-full">
         {/* Page header */}
         <div
           className="flex items-center justify-between px-5 py-4 shrink-0"
           style={{
+            padding: "16px 20px",
             borderBottom: "1px solid #1a1d28",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
           }}
         >
           <div>
@@ -67,7 +66,9 @@ export function Discover() {
               style={{
                 background: sync.isPending ? "#1e2540" : "#3d6ef8",
                 color: "#fff",
+                padding: "7px 14px",
                 fontSize: 13,
+                fontWeight: 500,
                 border: "none",
                 cursor: sync.isPending ? "not-allowed" : "pointer",
                 opacity: sync.isPending ? 0.7 : 1,
