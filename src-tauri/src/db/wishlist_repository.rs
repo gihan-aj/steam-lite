@@ -23,6 +23,7 @@ impl WishlistRepository {
                 reviews_total,
                 date_added,
                 current_price,
+                original_price,
                 historical_low,
                 discount_percent
             FROM wishlist
@@ -42,9 +43,9 @@ impl WishlistRepository {
             r#"
             INSERT OR REPLACE INTO wishlist (
                 app_id, name, review_summary, reviews_percent,
-                reviews_total, date_added, current_price,
+                reviews_total, date_added, current_price, original_price,
                 historical_low, discount_percent, last_checked
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             "#,
             item.app_id,
             item.name,
@@ -53,6 +54,7 @@ impl WishlistRepository {
             item.reviews_total,
             item.date_added,
             item.current_price,
+            item.original_price,
             item.historical_low,
             item.discount_percent
         )

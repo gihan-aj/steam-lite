@@ -232,69 +232,69 @@ impl SteamClient{
     /// 🦀 RUST LESSON: loops that accumulate results
     /// We loop until we get an empty page, collecting all results into one Vec.
     /// This is a common pattern for paginated APIs.
-    pub async fn get_wishlist(
-        &self,
-        steam_id: &str,
-    ) -> Result<Vec<(i64, WishlistEntry)>> {
-        let mut all_items : Vec<(i64, WishlistEntry)> = Vec::new();
-        let mut page = 0;
+    // pub async fn get_wishlist(
+    //     &self,
+    //     steam_id: &str,
+    // ) -> Result<Vec<(i64, WishlistEntry)>> {
+    //     let mut all_items : Vec<(i64, WishlistEntry)> = Vec::new();
+    //     let mut page = 0;
 
-        loop {
-            let url = format!(
-                "https://store.steampowered.com/wishlist/profiles/{}/wishlistdata/?p={}",
-                steam_id, page
-            );
+    //     loop {
+    //         let url = format!(
+    //             "https://store.steampowered.com/wishlist/profiles/{}/wishlistdata/?p={}",
+    //             steam_id, page
+    //         );
 
-            let response = self.client
-                .get(&url)
-                .send()
-                .await
-                .map_err(|e| AppError::Api(format!("Wishlist fetch failed: {}", e)))?;
+    //         let response = self.client
+    //             .get(&url)
+    //             .send()
+    //             .await
+    //             .map_err(|e| AppError::Api(format!("Wishlist fetch failed: {}", e)))?;
 
-            if !response.status().is_success() {
-                // 500 often means private profile or invalid Steam ID
-                return Err(AppError::Api(format!(
-                    "Steam returned {} — check your Steam ID and make sure your profile is public",
-                    response.status()
-                )));
-            }
+    //         if !response.status().is_success() {
+    //             // 500 often means private profile or invalid Steam ID
+    //             return Err(AppError::Api(format!(
+    //                 "Steam returned {} — check your Steam ID and make sure your profile is public",
+    //                 response.status()
+    //             )));
+    //         }
 
-            // The response is HashMap<String, WishlistEntry>
-            // where key = app_id as string
-            let page_data: HashMap<String, WishlistEntry> = response
-                .json()
-                .await
-                .map_err(|e| AppError::Parse(
-                    format!("Failed to parse wishlist page {}: {}", page, e)
-                ))?;
+    //         // The response is HashMap<String, WishlistEntry>
+    //         // where key = app_id as string
+    //         let page_data: HashMap<String, WishlistEntry> = response
+    //             .json()
+    //             .await
+    //             .map_err(|e| AppError::Parse(
+    //                 format!("Failed to parse wishlist page {}: {}", page, e)
+    //             ))?;
 
-            if page_data.is_empty() {
-                // No more pages
-                break;
-            }
+    //         if page_data.is_empty() {
+    //             // No more pages
+    //             break;
+    //         }
 
-            // Convert string keys to i64 app_ids
-            // 🦀 RUST LESSON: .into_iter() consumes the HashMap
-            // giving us ownership of both key and value
-            for (app_id_str, entry) in page_data.into_iter() {
-                if let Ok(app_id) = app_id_str.parse::<i64>() {
-                    all_items.push((app_id, entry));
-                }
-            }
+    //         // Convert string keys to i64 app_ids
+    //         // 🦀 RUST LESSON: .into_iter() consumes the HashMap
+    //         // giving us ownership of both key and value
+    //         for (app_id_str, entry) in page_data.into_iter() {
+    //             if let Ok(app_id) = app_id_str.parse::<i64>() {
+    //                 all_items.push((app_id, entry));
+    //             }
+    //         }
 
-            page += 1;
+    //         page += 1;
 
-            // Safety limit — no one has 10,000 wishlist items
-            if page > 10 {
-                break;
-            }
-        }
+    //         // Safety limit — no one has 10,000 wishlist items
+    //         if page > 10 {
+    //             break;
+    //         }
+    //     }
 
-        // Sort by wishlist priority (user's ordering)
-        all_items.sort_by_key(|(_, entry)| entry.priority);
+    //     // Sort by wishlist priority (user's ordering)
+    //     all_items.sort_by_key(|(_, entry)| entry.priority);
 
-        Ok(all_items)
-    }
+    //     Ok(all_items)
+    // }
 
     /// Fetch wishlist using the new official Steam API.
     /// Returns Vec of (app_id, priority, date_added).

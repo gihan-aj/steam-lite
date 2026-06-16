@@ -47,7 +47,7 @@ pub async fn fetch_wishlist(
         let discount_percent = details.price_overview
             .as_ref()
             .map(|p| p.discount_percent);
-        
+
         let item = WishlistItem {
             app_id: *app_id,
             name: details.name.clone(),
@@ -56,6 +56,7 @@ pub async fn fetch_wishlist(
             reviews_total: None,
             date_added: Some(*date_added),
             current_price,
+            original_price,
             historical_low: None,
             discount_percent,
             buy_recommendation: None,

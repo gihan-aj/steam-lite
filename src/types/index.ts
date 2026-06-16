@@ -31,6 +31,7 @@ export interface WishlistItem {
   reviews_total: number | null;
   date_added: number | null;
   current_price: number | null;
+  original_price: number | null;
   historical_low: number | null;
   discount_percent: number | null;
   buy_recommendation: BuyRecommendation | null;

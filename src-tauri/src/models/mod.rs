@@ -27,6 +27,7 @@ pub struct WishlistRow {
     pub reviews_total:    Option<i64>,
     pub date_added:       Option<i64>,
     pub current_price:    Option<i64>,
+    pub original_price:   Option<i64>,
     pub historical_low:   Option<i64>,
     pub discount_percent: Option<i64>,
 }
@@ -131,6 +132,9 @@ pub struct WishlistItem {
  
     /// Current price from our price tracking
     pub current_price:      Option<i64>,
+
+    /// The original price of the game
+    pub original_price:      Option<i64>,
  
     /// The all-time historical low price
     pub historical_low:     Option<i64>,
@@ -152,6 +156,7 @@ impl From<WishlistRow> for WishlistItem {
             reviews_total:      row.reviews_total,
             date_added:         row.date_added,
             current_price:      row.current_price,
+            original_price:     row.original_price,
             historical_low:     row.historical_low,
             discount_percent:   row.discount_percent,
             buy_recommendation: None, // filled in by the service layer later

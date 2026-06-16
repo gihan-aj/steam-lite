@@ -207,7 +207,7 @@ function WishlistCard({ item }: { item: WishlistItem }) {
                 marginTop: 2,
               }}
             >
-              {formatPrice(item.historical_low ?? item.current_price)}
+              {formatPrice(item.original_price ?? item.current_price)}
             </div>
           </>
         ) : (
