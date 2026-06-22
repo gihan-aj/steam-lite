@@ -264,19 +264,19 @@ impl Default for UserSettings {
 // ─────────────────────────────────────────────
 // UTILITY FUNCTIONS
 // ─────────────────────────────────────────────
-/// Helper to convert a price in cents to a display string.
-pub fn format_price(cents: i64) -> String {
-    if cents == 0 {
-        "Free".to_string()
-    } else {
-        format!("${:.2}", cents as f64 / 100.0)
-    }
-}
+// Helper to convert a price in cents to a display string.
+// pub fn format_price(cents: i64) -> String {
+//     if cents == 0 {
+//         "Free".to_string()
+//     } else {
+//         format!("${:.2}", cents as f64 / 100.0)
+//     }
+// }
  
-/// Calculate discount percentage given original and current price.
-pub fn calculate_discount(original: i64, current: i64) -> i64 {
-    if original == 0 {
-        return 0;
-    }
-    (((original - current) as f64 / original as f64) * 100.0) as i64
-}
+// Calculate discount percentage given original and current price.
+// pub fn calculate_discount(original: i64, current: i64) -> i64 {
+//     if original == 0 {
+//         return 0;
+//     }
+//     (((original - current) as f64 / original as f64) * 100.0) as i64
+// }

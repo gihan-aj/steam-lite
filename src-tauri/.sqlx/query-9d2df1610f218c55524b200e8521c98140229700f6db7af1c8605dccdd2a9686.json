@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM games\n            WHERE last_updated < datetime('now', '-' || ? || ' days')\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "9d2df1610f218c55524b200e8521c98140229700f6db7af1c8605dccdd2a9686"
+}

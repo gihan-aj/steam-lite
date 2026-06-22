@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO price_history (app_id, price, discount_percent, recorded_at, source)\n            VALUES (?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "02a6e38a2a8fa57b35c5065b1fdb8e5636d3022e8831afac9d90254cd8c399c5"
+}

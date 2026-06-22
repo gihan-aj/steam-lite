@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT MIN(price) as low FROM price_history WHERE app_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "low",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "34381a1e20b73b61cddd91b92add19717f1b260d988f2eebf98f463093c0ee9f"
+}

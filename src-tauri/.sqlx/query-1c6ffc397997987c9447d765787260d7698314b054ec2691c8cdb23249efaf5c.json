@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                app_id,\n                name,\n                review_score,\n                total_reviews,\n                is_indie as \"is_indie: bool\",\n                price_current,\n                price_original,\n                platform_windows as \"platform_windows: bool\",\n                tags,\n                last_updated as \"last_updated: chrono::DateTime<chrono::Utc>\"\n            FROM games\n            WHERE app_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "app_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "app_id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "review_score",
+        "ordinal": 2,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "review_score"
+          }
+        }
+      },
+      {
+        "name": "total_reviews",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "total_reviews"
+          }
+        }
+      },
+      {
+        "name": "is_indie: bool",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "is_indie"
+          }
+        }
+      },
+      {
+        "name": "price_current",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "price_current"
+          }
+        }
+      },
+      {
+        "name": "price_original",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "price_original"
+          }
+        }
+      },
+      {
+        "name": "platform_windows: bool",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "platform_windows"
+          }
+        }
+      },
+      {
+        "name": "tags",
+        "ordinal": 8,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "tags"
+          }
+        }
+      },
+      {
+        "name": "last_updated: chrono::DateTime<chrono::Utc>",
+        "ordinal": 9,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "last_updated"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "1c6ffc397997987c9447d765787260d7698314b054ec2691c8cdb23249efaf5c"
+}

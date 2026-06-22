@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM wishlist WHERE app_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "0df193efb64d0aed01a3e2dbb0d3e894c34d418b7d0d3e70efcaad23597ec28e"
+}

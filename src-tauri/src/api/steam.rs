@@ -1,14 +1,9 @@
 use std::collections::HashMap;
-// use anyhow::Ok;
 use reqwest::Client;
-use serde::{Deserialize, Serialize, de};
+use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 use crate::api::rate_limiter::RateLimiter;
 
-// Two separate Steam endpoints:
-//   1. Wishlist data  — store.steampowered.com/wishlist/profiles/{id}/wishlistdata/
-//   2. App details    — store.steampowered.com/api/appdetails?appids={id}
-//
 // 🦀 RUST LESSON: #[serde(default)]
 // Steam's API is inconsistent — some fields exist on some games but not others.
 // `#[serde(default)]` means: if this field is missing from the JSON,
@@ -18,101 +13,6 @@ use crate::api::rate_limiter::RateLimiter;
 // ─────────────────────────────────────────────
 // WISHLIST TYPES
 // ─────────────────────────────────────────────
-
-/// One game entry from the wishlist endpoint.
-/// The JSON key is the app_id as a string e.g. "1245620": { ... }
-#[derive(Debug, Clone, Deserialize)]
-pub struct WishlistEntry {
-    pub name: String,
-
-    #[serde(default)]
-    pub capsule: String,             // Small capsule image URL
-
-    #[serde(default)]
-    pub review_score: i64,           // Steam review score 0-9
-
-    #[serde(default)]
-    pub review_desc: String,         // e.g. "Overwhelmingly Positive"
-
-    #[serde(default)]
-    pub reviews_total: String,       // e.g. "25,000" (string with comma!)
-
-    #[serde(default)]
-    pub reviews_percent: i64,        // e.g. 98
-
-    #[serde(default)]
-    pub release_date: Option<i64>,   // Unix timestamp, None if unreleased
-
-    #[serde(default)]
-    pub release_string: String,      // e.g. "May 6, 2021"
-
-    #[serde(default)]
-    pub platform_windows: bool,
-
-    /// Price info — comes as an array of subscription options
-    #[serde(default)]
-    pub subs: Vec<WishlistSub>,
-
-    #[serde(default)]
-    pub priority: i64,               // User's wishlist order (0 = top)
-
-    #[serde(default)]
-    pub added: i64,                  // Unix timestamp of when wishlisted
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct WishlistSub {
-    pub id: i64,
-
-    /// Price in cents as string e.g. "999"
-    #[serde(default)]
-    pub price: String,
-
-    /// Original price in cents as string
-    #[serde(default)]
-    pub original_price: String,
-
-    /// Discount percent as string e.g. "75"  
-    #[serde(default)]
-    pub discount_block: String,
-}
-
-impl WishlistEntry {
-    /// Get the current price in cents from the first subscription option.
-    pub fn price_cents(&self) -> Option<i64> {
-        self.subs.first()
-            .and_then(|s| s.price.replace(",", "").parse::<i64>().ok())
-            .filter(|&p| p > 0)
-    }
-
-    pub fn original_price_cents(&self) -> Option<i64> {
-        self.subs.first()
-            .and_then(|s| s.original_price.replace(",", "").parse::<i64>().ok())
-            .filter(|&p| p > 0)
-    }
-
-    pub fn discount_percent(&self) -> Option<i64> {
-        self.subs.first()
-            .and_then(|s| {
-                // discount_block is e.g. "-75%<br>..." so we extract the number
-                let pct_str: String = s.discount_block
-                    .chars()
-                    .filter(|c| c.is_numeric())
-                    .collect();
-                pct_str.parse::<i64>().ok()
-            })
-            .filter(|&d| d > 0)
-    }
-
-    /// Parse the reviews_total string (e.g. "25,000") to a number.
-    pub fn total_reviews_count(&self) -> Option<i64> {
-        let cleaned: String = self.reviews_total
-            .chars()
-            .filter(|c| c.is_numeric())
-            .collect();
-        cleaned.parse::<i64>().ok()
-    }
-}
 
 #[derive(Debug, Deserialize)]
 struct WishlistApiResponse {
@@ -228,75 +128,6 @@ impl SteamClient{
         }
     }
 
-    /// Fetch all pages of a user's wishlist.
-    ///
-    /// 🦀 RUST LESSON: loops that accumulate results
-    /// We loop until we get an empty page, collecting all results into one Vec.
-    /// This is a common pattern for paginated APIs.
-    // pub async fn get_wishlist(
-    //     &self,
-    //     steam_id: &str,
-    // ) -> Result<Vec<(i64, WishlistEntry)>> {
-    //     let mut all_items : Vec<(i64, WishlistEntry)> = Vec::new();
-    //     let mut page = 0;
-
-    //     loop {
-    //         let url = format!(
-    //             "https://store.steampowered.com/wishlist/profiles/{}/wishlistdata/?p={}",
-    //             steam_id, page
-    //         );
-
-    //         let response = self.client
-    //             .get(&url)
-    //             .send()
-    //             .await
-    //             .map_err(|e| AppError::Api(format!("Wishlist fetch failed: {}", e)))?;
-
-    //         if !response.status().is_success() {
-    //             // 500 often means private profile or invalid Steam ID
-    //             return Err(AppError::Api(format!(
-    //                 "Steam returned {} — check your Steam ID and make sure your profile is public",
-    //                 response.status()
-    //             )));
-    //         }
-
-    //         // The response is HashMap<String, WishlistEntry>
-    //         // where key = app_id as string
-    //         let page_data: HashMap<String, WishlistEntry> = response
-    //             .json()
-    //             .await
-    //             .map_err(|e| AppError::Parse(
-    //                 format!("Failed to parse wishlist page {}: {}", page, e)
-    //             ))?;
-
-    //         if page_data.is_empty() {
-    //             // No more pages
-    //             break;
-    //         }
-
-    //         // Convert string keys to i64 app_ids
-    //         // 🦀 RUST LESSON: .into_iter() consumes the HashMap
-    //         // giving us ownership of both key and value
-    //         for (app_id_str, entry) in page_data.into_iter() {
-    //             if let Ok(app_id) = app_id_str.parse::<i64>() {
-    //                 all_items.push((app_id, entry));
-    //             }
-    //         }
-
-    //         page += 1;
-
-    //         // Safety limit — no one has 10,000 wishlist items
-    //         if page > 10 {
-    //             break;
-    //         }
-    //     }
-
-    //     // Sort by wishlist priority (user's ordering)
-    //     all_items.sort_by_key(|(_, entry)| entry.priority);
-
-    //     Ok(all_items)
-    // }
-
     /// Fetch wishlist using the new official Steam API.
     /// Returns Vec of (app_id, priority, date_added).
     /// Requires a Steam API key.
@@ -371,10 +202,6 @@ impl SteamClient{
                     println!("[WARN] Failed to get details for {}: {}", item.appid, e);
                 }
             }
-            
-            // Small delay between requests — Steam rate limit is generous
-            // but we want to be a good citizen
-            // tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
 
         println!("[INFO] Got details for {}/{} wishlist games", result.len(), items.len());

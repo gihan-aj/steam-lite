@@ -160,6 +160,14 @@ sqlx migrate run --database-url sqlite:steam-lite.db
 
 ---
 
+## External API Data Structures
+
+- [SteamSpy Game Data](docs/steamspy_data.md)
+- [Steam Community Wishlist Data](docs/steam_community_data.md)
+- [IsThereAnyDeal Price History Data](docs/is_there_any_deal_data.md)
+
+---
+
 ## Roadmap
 
 ### Phase 1 — Foundation (current)
@@ -170,8 +178,8 @@ sqlx migrate run --database-url sqlite:steam-lite.db
 - [ ] Game list UI with search and filters
 
 ### Phase 2 — Wishlist and prices
-- [ ] Steam wishlist importer
-- [ ] IsThereAnyDeal price history integration
+- [x] Steam wishlist importer
+- [x] IsThereAnyDeal price history integration
 - [ ] Price history chart component
 - [ ] Discount discovery view
 

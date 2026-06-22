@@ -11,10 +11,9 @@
 // The body is serialized automatically via serde.
 
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use crate::api;
+use serde::{Deserialize};
 use crate::error::{AppError, Result};
-use crate::api::rate_limiter::{self, RateLimiter};
+use crate::api::rate_limiter::{RateLimiter};
 
 // ─────────────────────────────────────────────
 // RESPONSE TYPES
