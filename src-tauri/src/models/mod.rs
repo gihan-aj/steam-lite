@@ -20,18 +20,25 @@ pub struct GameRow {
 /// Raw database row for the `wishlist` table.
 #[derive(Debug, Clone)]
 pub struct WishlistRow {
-    pub app_id:           i64,
-    pub name:             String,
-    pub review_summary:   Option<String>,
-    pub reviews_percent:  Option<i64>,
-    pub reviews_total:    Option<i64>,
-    pub date_added:       Option<i64>,
-    pub current_price:    Option<i64>,
-    pub original_price:   Option<i64>,
-    pub historical_low:   Option<i64>,
-    pub discount_percent: Option<i64>,
-    pub header_image:     Option<String>,
-    pub short_description:Option<String>,
+    pub app_id:                 i64,
+    pub name:                   String,
+    pub review_summary:         Option<String>,
+    pub reviews_percent:        Option<i64>,
+    pub reviews_total:          Option<i64>,
+    pub date_added:             Option<i64>,
+    pub current_price:          Option<i64>,
+    pub original_price:         Option<i64>,
+    pub historical_low:         Option<i64>,
+    pub discount_percent:       Option<i64>,
+    pub header_image:           Option<String>,
+    pub short_description:      Option<String>,
+    pub steam_historical_cut:   Option<i64>,
+    pub steam_historical_date:  Option<String>,
+    pub all_time_low_cut:       Option<i64>,
+    pub all_time_low_shop:      Option<String>,
+    pub all_time_low_date:      Option<String>,
+    pub predicted_regional_low: Option<i64>,
+    pub is_at_regional_low:     i64, 
 }
 
 /// Raw database row for the `price_history` table.
@@ -120,53 +127,55 @@ pub struct RecommendedGame {
 /// A single item from a user's Steam wishlist.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WishlistItem {
-    pub app_id:             i64,
-    pub name:               String,
- 
-    /// Steam's review summary e.g. "Overwhelmingly Positive"
-    pub review_summary:     Option<String>,
- 
-    pub reviews_percent:    Option<i64>,
-    pub reviews_total:      Option<i64>,
- 
-    /// Unix timestamp of when the game was added to the wishlist
-    pub date_added:         Option<i64>,
- 
-    /// Current price from our price tracking
-    pub current_price:      Option<i64>,
-
-    /// The original price of the game
-    pub original_price:      Option<i64>,
- 
-    /// The all-time historical low price
-    pub historical_low:     Option<i64>,
- 
-    /// Current discount percentage (0-100)
-    pub discount_percent:   Option<i64>,
- 
-    /// Our prediction on whether to buy now or wait
-    pub buy_recommendation: Option<BuyRecommendation>,
-
-    pub header_image:       Option<String>,
-    pub short_description:  Option<String>,
+    pub app_id:                 i64,
+    pub name:                   String,
+    pub review_summary:         Option<String>,
+    pub reviews_percent:        Option<i64>,
+    pub reviews_total:          Option<i64>,
+    pub date_added:             Option<i64>,
+    pub current_price:          Option<i64>,
+    pub original_price:         Option<i64>,
+    pub historical_low:         Option<i64>,
+    pub discount_percent:       Option<i64>,
+    pub header_image:           Option<String>,
+    pub short_description:      Option<String>,
+    pub buy_recommendation:     Option<BuyRecommendation>,
+    pub steam_historical_cut:   Option<i64>,
+    pub steam_historical_date:  Option<String>,
+    pub all_time_low_cut:       Option<i64>,
+    pub all_time_low_shop:      Option<String>,
+    pub all_time_low_date:      Option<String>,
+    pub predicted_regional_low: Option<i64>,
+    pub is_at_regional_low:     bool,
+    pub price_signal:           Option<PriceSignal>,
+    pub itad_discrepancy:       Option<i64>,
 }
 
 impl From<WishlistRow> for WishlistItem {
     fn from(row: WishlistRow) -> Self {
         WishlistItem {
-            app_id:             row.app_id,
-            name:               row.name,
-            review_summary:     row.review_summary,
-            reviews_percent:    row.reviews_percent,
-            reviews_total:      row.reviews_total,
-            date_added:         row.date_added,
-            current_price:      row.current_price,
-            original_price:     row.original_price,
-            historical_low:     row.historical_low,
-            discount_percent:   row.discount_percent,
-            buy_recommendation: None, // filled in by the service layer later
-            header_image:       row.header_image,
-            short_description:  row.short_description,
+            app_id:                 row.app_id,
+            name:                   row.name,
+            review_summary:         row.review_summary,
+            reviews_percent:        row.reviews_percent,
+            reviews_total:          row.reviews_total,
+            date_added:             row.date_added,
+            current_price:          row.current_price,
+            original_price:         row.original_price,
+            historical_low:         row.historical_low,
+            discount_percent:       row.discount_percent,
+            header_image:           row.header_image,
+            short_description:      row.short_description,
+            buy_recommendation:     None,
+            steam_historical_cut:   row.steam_historical_cut,
+            steam_historical_date:  row.steam_historical_date,
+            all_time_low_cut:       row.all_time_low_cut,
+            all_time_low_shop:      row.all_time_low_shop,
+            all_time_low_date:      row.all_time_low_date,
+            predicted_regional_low: row.predicted_regional_low,
+            is_at_regional_low:     row.is_at_regional_low != 0,
+            price_signal:           None, 
+            itad_discrepancy:       None,
         }
     }
 }
@@ -185,6 +194,19 @@ pub struct BuyRecommendation {
  
     /// Our estimate of when the next sale might occur
     pub predicted_next_sale: Option<String>,
+}
+
+/// Generate a human-readable "buy signal" for the UI.
+///
+/// Returns a structured recommendation the wishlist card can display.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriceSignal {
+    /// Primary badge text e.g. "★ Regional Low", "↓ Below historical low"
+    pub badge: String,
+    /// Badge colour category: "green", "yellow", "blue", "none"
+    pub level: String,
+    /// Supporting detail e.g. "Best Steam price: -65% (Jun 2026)"
+    pub detail: Option<String>,
 }
  
 /// A single price data point stored in price_history table.

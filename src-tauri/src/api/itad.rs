@@ -107,12 +107,16 @@ pub struct GamePriceData {
     pub historical_low_cut:  Option<i64>,
     /// Store that had the historical low
     pub historical_low_shop: Option<String>,
+    pub historical_low_timestamp: Option<String>,
     /// Steam's current lowest price (cents)
     pub steam_current:       Option<i64>,
-    /// Steam's all-time lowest price (cents)
-    pub steam_low:           Option<i64>,
     /// Current % cut on Steam
     pub steam_cut:           Option<i64>,
+    /// Steam's all-time lowest price (cents)
+    pub steam_low:           Option<i64>,
+    /// Steam's all-time lowest % cut on Steam
+    pub steam_low_cut:           Option<i64>,
+    pub steam_low_timestamp:      Option<String>,
 }
 
 // ─────────────────────────────────────────────
@@ -348,17 +352,29 @@ impl ItadClient  {
                         .and_then(|l| l.low.as_ref())
                         .map(|l| l.shop.name.clone()),
 
+                    historical_low_timestamp: low
+                        .and_then(|l| l.low.as_ref())
+                        .map(|l| l.timestamp.clone()),
+
                     steam_current: overview
                         .and_then(|o| o.current.as_ref())
                         .map(|c| c.price.amount_int),
+
+                    steam_cut: overview
+                        .and_then(|o| o.current.as_ref())
+                        .map(|c| c.cut),
 
                     steam_low: overview
                         .and_then(|o| o.lowest.as_ref())
                         .map(|l| l.price.amount_int),
 
-                    steam_cut: overview
-                        .and_then(|o| o.current.as_ref())
+                    steam_low_cut: overview
+                        .and_then(|o| o.lowest.as_ref())
                         .map(|c| c.cut),
+                    
+                    steam_low_timestamp: overview
+                        .and_then(|o| o.lowest.as_ref())
+                        .map(|l| l.timestamp.clone()),
                 }
             })
             .collect();

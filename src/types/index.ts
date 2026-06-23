@@ -37,6 +37,21 @@ export interface WishlistItem {
   buy_recommendation: BuyRecommendation | null;
   header_image: string | null;
   short_description: string | null;
+  steam_historical_cut: number | null;
+  steam_historical_date: string | null;
+  all_time_low_cut: number | null;
+  all_time_low_shop: string | null;
+  all_time_low_date: string | null;
+  predicted_regional_low: number | null;
+  is_at_regional_low: boolean;
+  price_signal: PriceSignal | null;
+  itad_discrepancy: number | null;
+}
+
+export interface PriceSignal {
+  badge: string;
+  level: "green" | "yellow" | "blue" | "none";
+  detail: string | null;
 }
 
 export interface BuyRecommendation {

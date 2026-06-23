@@ -16,18 +16,13 @@ impl WishlistRepository {
             WishlistRow,
             r#"
             SELECT
-                app_id,
-                name,
-                review_summary,
-                reviews_percent,
-                reviews_total,
-                date_added,
-                current_price,
-                original_price,
-                historical_low,
-                discount_percent,
-                header_image,
-                short_description
+                app_id, name, review_summary,
+                reviews_percent, reviews_total, date_added,
+                current_price, original_price, historical_low,
+                discount_percent, header_image, short_description,
+                steam_historical_cut, steam_historical_date,
+                all_time_low_cut, all_time_low_shop, all_time_low_date,
+                predicted_regional_low, is_at_regional_low
             FROM wishlist
             ORDER BY name ASC
             "#
@@ -41,13 +36,23 @@ impl WishlistRepository {
     }
 
     pub async fn upsert(&self, item: &WishlistItem) -> Result<()> {
+        let is_at_regional_low = item.is_at_regional_low as i64;
+        
         sqlx::query!(
             r#"
             INSERT OR REPLACE INTO wishlist (
                 app_id, name, review_summary, reviews_percent,
                 reviews_total, date_added, current_price, original_price,
-                historical_low, discount_percent, header_image, short_description, last_checked
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                historical_low, discount_percent, header_image, short_description,
+                steam_historical_cut, steam_historical_date,
+                all_time_low_cut, all_time_low_shop, all_time_low_date,
+                predicted_regional_low, is_at_regional_low,
+                last_checked
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?,
+                CURRENT_TIMESTAMP
+            )
             "#,
             item.app_id,
             item.name,
@@ -60,7 +65,14 @@ impl WishlistRepository {
             item.historical_low,
             item.discount_percent,
             item.header_image,
-            item.short_description
+            item.short_description,
+            item.steam_historical_cut,
+            item.steam_historical_date,
+            item.all_time_low_cut,
+            item.all_time_low_shop,
+            item.all_time_low_date,
+            item.predicted_regional_low,
+            is_at_regional_low,
         )
         .execute(&self.pool)
         .await?;

@@ -149,7 +149,23 @@ export function Wishlist() {
 }
 
 function WishlistCard({ item }: { item: WishlistItem }) {
-  const hasDiscount = item.discount_percent && item.discount_percent > 0;
+  const hasDiscount = (item.discount_percent ?? 0) > 0;
+  const hasHistory = item.steam_historical_cut !== null;
+  const hasOtherShop =
+    item.all_time_low_shop !== null && item.all_time_low_shop !== "Steam";
+
+  const signal = item.price_signal;
+
+  const signalColors: Record<
+    string,
+    { bg: string; border: string; text: string }
+  > = {
+    green: { bg: "#14291e", border: "#16a34a", text: "#4ade80" },
+    yellow: { bg: "#292010", border: "#ca8a04", text: "#fbbf24" },
+    blue: { bg: "#0f1e35", border: "#1d4ed8", text: "#60a5fa" },
+    none: { bg: "#1a1d28", border: "#2a2d3a", text: "#5a5f72" },
+  };
+  const sigColor = signalColors[signal?.level ?? "none"];
 
   const scoreColor =
     (item.reviews_percent ?? 0) >= 90
@@ -158,31 +174,46 @@ function WishlistCard({ item }: { item: WishlistItem }) {
         ? "#f59e0b"
         : "#9096a8";
 
+  const cardBorderColor = item.is_at_regional_low ? "#16a34a55" : "#242736";
+
   return (
     <article
       style={{
         background: "#1c1e27",
-        border: "1px solid #242736",
+        border: `1px solid ${cardBorderColor}`,
         borderRadius: 12,
-        overflow: "hidden",
+        // 🔑 No overflow:hidden here — let content grow freely
+        // overflow:hidden is on the image wrapper only
         display: "flex",
         flexDirection: "column",
         transition: "border-color 0.15s, transform 0.15s",
         cursor: "pointer",
+        // Card always tall enough to show all content
+        minHeight: 320,
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = "#3d6ef8AA";
+        el.style.borderColor = item.is_at_regional_low
+          ? "#16a34a"
+          : "#3d6ef8AA";
         el.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = "#242736";
+        el.style.borderColor = cardBorderColor;
         el.style.transform = "translateY(0)";
       }}
     >
-      {/* Header image */}
-      <div style={{ position: "relative", height: 120, flexShrink: 0 }}>
+      {/* ── Header image — overflow:hidden here clips the image to border radius ── */}
+      <div
+        style={{
+          position: "relative",
+          height: 115,
+          flexShrink: 0,
+          overflow: "hidden", // ← image clipping only, not card content
+          borderRadius: "12px 12px 0 0", // ← top corners only
+        }}
+      >
         {item.header_image ? (
           <img
             src={item.header_image}
@@ -195,89 +226,85 @@ function WishlistCard({ item }: { item: WishlistItem }) {
             }}
           />
         ) : (
-          // Fallback gradient when no image
           <div
             style={{
               width: "100%",
               height: "100%",
-              background: "linear-gradient(135deg, #1e2540 0%, #1a1d28 100%)",
+              background: "linear-gradient(135deg, #1e2540, #1a1d28)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 32,
+              fontSize: 36,
               color: "#3d6ef8",
               fontWeight: 700,
-              opacity: 0.4,
+              opacity: 0.3,
             }}
           >
             {item.name.charAt(0)}
           </div>
         )}
 
-        {/* Discount badge over image */}
-        {hasDiscount && (
-          <div
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              background: "#16a34a",
-              color: "#dcfce7",
-              fontSize: 12,
-              fontWeight: 700,
-              padding: "3px 8px",
-              borderRadius: 6,
-            }}
-          >
-            -{item.discount_percent}%
-          </div>
-        )}
-
-        {/* Dark gradient overlay at bottom of image — lets text overlay look clean */}
+        {/* Gradient fade */}
         <div
           style={{
             position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
-            height: 48,
-            background: "linear-gradient(to top, #1c1e27 0%, transparent 100%)",
+            height: 56,
+            background: "linear-gradient(to top, #1c1e27, transparent)",
           }}
         />
+
+        {/* Discount badge */}
+        {hasDiscount && (
+          <div
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              background: "#1a3a1a",
+              border: "1px solid #166534",
+              color: "#4ade80",
+              fontSize: 11,
+              fontWeight: 700,
+              padding: "3px 7px",
+              borderRadius: 5,
+            }}
+          >
+            -{item.discount_percent}%
+          </div>
+        )}
       </div>
 
-      {/* Card body */}
+      {/* ── Game info ─────────────────────────────── */}
       <div
         style={{
-          padding: "10px 14px 14px",
+          padding: "10px 13px 0",
           display: "flex",
           flexDirection: "column",
-          gap: 6,
-          flex: 1,
+          gap: 5,
         }}
       >
-        {/* Game name */}
         <h3
           style={{
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 600,
             color: "#e0e2e8",
-            lineHeight: 1.3,
             margin: 0,
+            lineHeight: 1.3,
           }}
         >
           {item.name}
         </h3>
 
-        {/* Short description */}
         {item.short_description && (
           <p
             style={{
               fontSize: 11,
-              color: "#6b7280",
-              lineHeight: 1.5,
+              color: "#5a5f72",
               margin: 0,
-              // Clamp to 2 lines
+              lineHeight: 1.5,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical" as const,
@@ -288,9 +315,8 @@ function WishlistCard({ item }: { item: WishlistItem }) {
           </p>
         )}
 
-        {/* Review score */}
         {item.review_summary && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <span
               style={{
                 width: 6,
@@ -302,79 +328,268 @@ function WishlistCard({ item }: { item: WishlistItem }) {
             />
             <span style={{ fontSize: 11, color: scoreColor }}>
               {item.review_summary}
+              {item.reviews_percent ? ` · ${item.reviews_percent}%` : ""}
             </span>
           </div>
         )}
+      </div>
 
-        {/* Spacer pushes price to bottom */}
-        <div style={{ flex: 1 }} />
+      {/* ── Current price ─────────────────────────── */}
+      <div
+        style={{
+          padding: "8px 13px",
+          marginTop: 6,
+          borderTop: "1px solid #1a1d28",
+          display: "flex",
+          alignItems: "baseline",
+          gap: 6,
+        }}
+      >
+        {hasDiscount && item.original_price ? (
+          <>
+            <span
+              style={{
+                fontSize: 11,
+                color: "#5a5f72",
+                textDecoration: "line-through",
+              }}
+            >
+              {formatPrice(item.original_price)}
+            </span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "#4ade80" }}>
+              {formatPrice(item.current_price)}
+            </span>
+          </>
+        ) : (
+          <span style={{ fontSize: 17, fontWeight: 700, color: "#e0e2e8" }}>
+            {formatPrice(item.current_price)}
+          </span>
+        )}
+        <span style={{ fontSize: 10, color: "#3a3f58" }}>LK regional</span>
+      </div>
 
-        {/* Price row */}
+      {/* ── Signal banner — BEFORE price rows so position is consistent ── */}
+      {signal && (
+        <div
+          style={{
+            margin: "0 13px 6px",
+            padding: "7px 10px",
+            background: sigColor.bg,
+            border: `1px solid ${sigColor.border}`,
+            borderRadius: 6,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 600, color: sigColor.text }}>
+            {signal.badge}
+          </span>
+          {signal.detail && (
+            <span
+              style={{
+                fontSize: 10,
+                color: sigColor.text,
+                opacity: 0.8,
+                lineHeight: 1.4,
+              }}
+            >
+              {signal.detail}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Price rows — after signal, at card bottom ─── */}
+      {(hasHistory || hasOtherShop) && (
+        <div
+          style={{
+            padding: "0 13px 12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
+            marginTop: "auto", // ← pushes price rows to card bottom
+            borderTop: "1px solid #1a1d28",
+            paddingTop: 6,
+          }}
+        >
+          <PriceRow
+            label="Steam low"
+            show={hasHistory}
+            cut={item.steam_historical_cut}
+            date={item.steam_historical_date}
+            price={item.predicted_regional_low}
+            isMatch={item.is_at_regional_low}
+            note={item.is_at_regional_low ? "← you are here" : undefined}
+            noteColor="#4ade80"
+            tooltipText="Steam's best ever discount × your LK regional base price"
+          />
+          <PriceRow
+            label="Other shops"
+            show={hasOtherShop}
+            cut={item.all_time_low_cut}
+            date={item.all_time_low_date}
+            shopName={item.all_time_low_shop}
+            note="⚠ may not ship to LK"
+            noteColor="#4a5070"
+            tooltipText="May not be available in your region or use Steam regional pricing"
+          />
+        </div>
+      )}
+    </article>
+  );
+}
+
+function PriceRow({
+  label,
+  show,
+  cut,
+  date,
+  price,
+  shopName,
+  isMatch,
+  note,
+  noteColor,
+  tooltipText,
+}: {
+  label: string;
+  show: boolean;
+  cut: number | null;
+  date: string | null;
+  price?: number | null;
+  shopName?: string | null;
+  isMatch?: boolean;
+  note?: string;
+  noteColor?: string;
+  tooltipText?: string;
+}) {
+  if (!show || cut === null) return null;
+
+  return (
+    <div
+      title={tooltipText}
+      style={{
+        padding: "5px 0",
+        borderBottom: "1px solid #15171f",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+      }}
+    >
+      {/* Line 1: label (+ shop name) on left, cut% + price on right */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 6,
+        }}
+      >
+        {/* Left: label · shop name */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 4,
-            paddingTop: 8,
-            borderTop: "1px solid #242736",
+            gap: 3,
+            minWidth: 0,
+            flex: 1,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {hasDiscount && item.original_price ? (
-              <>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "#5a5f72",
-                    textDecoration: "line-through",
-                  }}
-                >
-                  {formatPrice(item.original_price)}
-                </span>
-                <span
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: "#4ade80",
-                  }}
-                >
-                  {formatPrice(item.current_price)}
-                </span>
-              </>
-            ) : (
-              <span
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "#e0e2e8",
-                }}
-              >
-                {formatPrice(item.current_price)}
+          <span
+            style={{
+              fontSize: 10,
+              color: "#3a3f58",
+              flexShrink: 0,
+              fontWeight: 500,
+            }}
+          >
+            {label}
+          </span>
+          {shopName && (
+            <>
+              <span style={{ fontSize: 10, color: "#2a2d3a", flexShrink: 0 }}>
+                ·
               </span>
-            )}
-          </div>
-
-          {/* Historical low badge — when we have it */}
-          {item.historical_low &&
-            item.current_price &&
-            item.current_price <= item.historical_low && (
               <span
                 style={{
                   fontSize: 10,
-                  fontWeight: 600,
-                  color: "#fbbf24",
-                  background: "#2d1f02",
-                  border: "1px solid #78350f",
-                  padding: "2px 6px",
-                  borderRadius: 4,
+                  color: "#4a5070",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  // Takes remaining space, truncates if too long
+                  minWidth: 0,
                 }}
               >
-                ★ Lowest ever
+                {shopName}
               </span>
-            )}
+            </>
+          )}
+        </div>
+
+        {/* Right: cut% badge + price */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: isMatch ? "#4ade80" : "#5a6080",
+              background: isMatch ? "#14291e" : "#1a1d28",
+              border: `1px solid ${isMatch ? "#166534" : "#242736"}`,
+              padding: "1px 5px",
+              borderRadius: 4,
+            }}
+          >
+            -{cut}%
+          </span>
+
+          {price !== undefined && price !== null && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: isMatch ? "#4ade80" : "#9096a8",
+              }}
+            >
+              {formatPrice(price)}
+            </span>
+          )}
         </div>
       </div>
-    </article>
+
+      {/* Line 2: date + note — right-aligned under the cut%/price */}
+      {(date || note) && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end", // aligns under cut%/price above
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          {note && (
+            <span
+              style={{
+                fontSize: 10,
+                color: noteColor ?? "#5a5f72",
+                fontStyle: "italic",
+              }}
+            >
+              {note}
+            </span>
+          )}
+          {date && (
+            <span style={{ fontSize: 10, color: "#3a3f58" }}>({date})</span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

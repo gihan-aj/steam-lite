@@ -1,7 +1,13 @@
 use tauri::State;
 use crate::AppState;
-use crate::models::WishlistItem;
+use crate::models::{WishlistItem};
 use crate::error::AppError;
+use crate::services::price_intelligence::{
+    compute_predicted_regional_low,
+    is_at_regional_low,
+    compute_price_signal,
+    compute_itad_discrepancy
+};
 
 /// Fetch the user's Steam wishlist and store it locally.
 /// Returns the list of wishlist items with current prices.
@@ -73,12 +79,29 @@ pub async fn fetch_wishlist(
             discount_percent,
             buy_recommendation: None,
             header_image,
-            short_description
+            short_description,
+            steam_historical_cut: None,
+            steam_historical_date: None,
+            all_time_low_cut: None,
+            all_time_low_shop: None,
+            all_time_low_date: None,
+            predicted_regional_low: None,
+            is_at_regional_low: false,
+            price_signal: None,
+            itad_discrepancy: None,
         };
 
         // Save to local DB
         state.wishlist.upsert(&item).await?;
         wishlist_items.push(item);
+    }
+
+    for item in &mut wishlist_items {
+        let signal = compute_price_signal(item);
+        item.price_signal = Some(signal);
+
+        // We don't store US base price currently, so skip for now
+        item.itad_discrepancy = compute_itad_discrepancy(item.current_price, None);
     }
 
     // Now enrich with app details (header images, genres) in background
@@ -99,7 +122,21 @@ pub async fn fetch_wishlist(
 pub async fn get_wishlist(
     state: State<'_, AppState>,
 ) -> Result<Vec<WishlistItem>, AppError> {
-    state.wishlist.get_all().await
+    // state.wishlist.get_all().await
+    let mut wishlist = state.wishlist.get_all().await?;
+    if wishlist.len() > 0 {
+        for item in &mut wishlist {
+            let signal = compute_price_signal(item);
+            item.price_signal = Some(signal);
+
+            // We don't store US base price currently, so skip for now
+            item.itad_discrepancy = compute_itad_discrepancy(item.current_price, None);
+        }
+    }
+
+    // Return freshly updated wishlist from DB
+    // state.wishlist.get_all().await
+    Ok(wishlist)
 }
 
 /// Remove a game from the local wishlist cache.
@@ -148,23 +185,45 @@ pub async fn enrich_wishlist_prices(
 
     // Update each game in the DB with the historical low
     for data in &price_data {
-        // Update historical_low in wishlist table
-        if let Some(low) = data.historical_low {
-            // Find the matching wishlist item and update it
-            if let Some(item) = wishlist.iter().find(|w| w.app_id == data.steam_app_id) {
-                let mut updated = item.clone();
-                updated.historical_low = Some(low);
+        // Find the matching wishlist item and update it
+        if let Some(item) = wishlist.iter().find(|w| w.app_id == data.steam_app_id) {
+            let mut updated = item.clone();
 
-                // If current price <= historical low, it's at its lowest
-                // Update discount if we have better data from ITAD
-                if let Some(steam_cut) = data.steam_cut {
-                    if steam_cut > 0 {
-                        updated.discount_percent = Some(steam_cut);
-                    }
-                }
+            updated.steam_historical_cut = data.steam_low_cut;
 
-                state.wishlist.upsert(&updated).await?;
-            }
+            updated.steam_historical_date = data.steam_low_timestamp
+                .as_ref()
+                .and_then(|ts| ts.get(..7))  // "2026-06"
+                .map(|s| s.to_string());
+
+            updated.all_time_low_cut  = data.historical_low_cut;
+            updated.all_time_low_shop = data.historical_low_shop.clone();
+            updated.all_time_low_date = data.historical_low
+                .as_ref()
+                .and_then(|_| data.historical_low_timestamp.as_ref())
+                .and_then(|ts| ts.get(..7))
+                .map(|s| s.to_string());
+
+            updated.predicted_regional_low = compute_predicted_regional_low(&updated);
+
+            updated.is_at_regional_low = is_at_regional_low(&updated);
+
+            updated.historical_low = updated.predicted_regional_low;
+
+            let signal = compute_price_signal(&updated);
+
+            updated.price_signal = Some(signal);
+
+            println!(
+                "[ITAD] {} — steam cut: {:?}%, regional base: {:?}, predicted low: {:?}, at low: {}",
+                updated.name,
+                updated.steam_historical_cut,
+                updated.original_price.map(|p| format!("${:.2}", p as f64 / 100.0)),
+                updated.predicted_regional_low.map(|p| format!("${:.2}", p as f64 / 100.0)),
+                updated.is_at_regional_low,
+            );
+
+            state.wishlist.upsert(&updated).await?;
         }
 
         // Record current price in price_history for future trend analysis
@@ -184,6 +243,19 @@ pub async fn enrich_wishlist_prices(
         }
     }
 
+    // get the wishlist from db
+    let mut wishlist = state.wishlist.get_all().await?;
+    if wishlist.len() > 0 {
+        for item in &mut wishlist {
+            let signal = compute_price_signal(item);
+            item.price_signal = Some(signal);
+
+            // We don't store US base price currently, so skip for now
+            item.itad_discrepancy = compute_itad_discrepancy(item.current_price, None);
+        }
+    }
+
     // Return freshly updated wishlist from DB
-    state.wishlist.get_all().await
+    // state.wishlist.get_all().await
+    Ok(wishlist)
 }
