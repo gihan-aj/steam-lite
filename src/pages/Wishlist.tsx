@@ -5,7 +5,7 @@ import {
   useEnrichWishlist,
 } from "../hooks/useWishlist";
 import { useSettings } from "../hooks/useSettings";
-import { WishlistItem, formatPrice } from "../types";
+import { WishlistItem, formatPrice, getReviewDisplay } from "../types";
 
 export function Wishlist() {
   const { data: settings } = useSettings();
@@ -167,12 +167,7 @@ function WishlistCard({ item }: { item: WishlistItem }) {
   };
   const sigColor = signalColors[signal?.level ?? "none"];
 
-  const scoreColor =
-    (item.reviews_percent ?? 0) >= 90
-      ? "#4ade80"
-      : (item.reviews_percent ?? 0) >= 70
-        ? "#f59e0b"
-        : "#9096a8";
+  const review = getReviewDisplay(item);
 
   const cardBorderColor = item.is_at_regional_low ? "#16a34a55" : "#242736";
   console.log(`${item.name}: ${item.is_at_regional_low}`);
@@ -316,20 +311,19 @@ function WishlistCard({ item }: { item: WishlistItem }) {
           </p>
         )}
 
-        {item.review_summary && (
+        {(item.review_summary || item.review_summary) && (
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <span
               style={{
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: scoreColor,
+                background: review.color,
                 flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: 11, color: scoreColor }}>
-              {item.review_summary}
-              {item.reviews_percent ? ` · ${item.reviews_percent}%` : ""}
+            <span style={{ fontSize: 11, color: review.color }}>
+              {review.label}
             </span>
           </div>
         )}

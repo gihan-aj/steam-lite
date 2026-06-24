@@ -97,3 +97,53 @@ export function formatPrice(cents: number | null): string {
 export function formatReviewScore(score: number): string {
   return `${Math.round(score)}%`;
 }
+
+export function getReviewColor(
+  label: string | null,
+  score: number | null,
+): string {
+  if (label) {
+    if (label.includes("Overwhelmingly Positive")) return "#4ade80"; // bright green
+    if (label.includes("Very Positive")) return "#86efac"; // softer green
+    if (label.includes("Positive") && !label.includes("Mostly"))
+      return "#a3e635"; // lime
+    if (label.includes("Mostly Positive")) return "#fbbf24"; // amber
+    if (label.includes("Mixed")) return "#f97316"; // orange
+    if (label.includes("Mostly Negative")) return "#f87171"; // soft red
+    if (label.includes("Negative")) return "#ef4444"; // red
+    if (label.includes("Overwhelmingly Negative")) return "#dc2626"; // deep red
+  }
+  // Fallback to raw score if no label yet
+  if (score === null) return "#9096a8";
+  if (score >= 95) return "#4ade80";
+  if (score >= 85) return "#86efac";
+  if (score >= 80) return "#a3e635";
+  if (score >= 70) return "#fbbf24";
+  if (score >= 40) return "#f97316";
+  if (score >= 20) return "#f87171";
+  return "#ef4444";
+}
+
+export function getReviewDisplay(item: WishlistItem): {
+  label: string;
+  color: string;
+} {
+  // Prefer the computed label, fall back to raw percentage
+  const label = item.review_label ?? item.review_summary;
+  const score = item.steam_review_score ?? item.reviews_percent;
+  const color = getReviewColor(label, score);
+  const count = item.steam_review_count ?? item.reviews_total;
+
+  const countStr = count
+    ? count >= 1000
+      ? `${(count / 1000).toFixed(1)}k`
+      : count.toString()
+    : null;
+
+  const displayLabel = label ?? (score ? `${score}%` : "No reviews");
+
+  return {
+    label: countStr ? `${displayLabel} · ${countStr}` : displayLabel,
+    color,
+  };
+}
