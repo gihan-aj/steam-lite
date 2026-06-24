@@ -131,3 +131,36 @@ pub fn compute_price_signal(item: &WishlistItem) -> PriceSignal {
         detail: Some("Click ★ Enrich to fetch price history from ITAD".into()),
     }
 }
+
+/// Compute Steam's review label from score percentage and review count.
+/// Mirrors Steam's actual algorithm exactly.
+///
+/// 🦀 RUST LESSON: match with multiple conditions (guards)
+/// We use nested match + if guards to express the two-dimensional
+/// lookup table (score% × review count) cleanly.
+pub fn compute_review_label(score: i64, count: i64) -> &'static str {
+    match (score, count) {
+        // Overwhelmingly Positive/Negative (need 500+ reviews)
+        (95..=100, 500..) => "Overwhelmingly Positive",
+        (0..=19,   500..) => "Overwhelmingly Negative",
+
+        // Very Positive/Negative (need 50+ reviews)
+        (85..=100, 50..) => "Very Positive",
+        (0..=19,   50..) => "Very Negative",
+
+        // Standard labels (need 10+ reviews)
+        (80..=100, 10..) => "Positive",
+        (70..=79,  10..) => "Mostly Positive",
+        (40..=69,  10..) => "Mixed",
+        (20..=39,  10..) => "Mostly Negative",
+        (0..=19,   10..) => "Negative",
+
+        // Not enough reviews
+        _ => "No Reviews",
+    }
+    // 🦀 RUST LESSON: range patterns in match
+    // 95..=100 means "95 through 100 inclusive"
+    // 500.. means "500 or more" (open-ended range)
+    // Rust checks patterns top to bottom and stops at first match
+    // so order matters — Overwhelmingly must come before Very, etc.
+}

@@ -92,6 +92,41 @@ pub struct Price {
     pub currency: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GameInfo {
+    pub id:          String,
+    pub tags:        Option<Vec<String>>,
+    #[serde(rename = "releaseDate")]
+    pub release_date: Option<String>,
+    pub developers:  Option<Vec<InfoDeveloper>>,
+    pub reviews:     Option<Vec<ReviewScore>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InfoDeveloper {
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReviewScore {
+    pub score:  i64,
+    pub source: String,   // "Steam", "Metascore", "OpenCritic", etc.
+    pub count:  Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PriceHistoryEntry {
+    pub timestamp: String,
+    pub deal: HistoryDeal,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HistoryDeal {
+    pub price:   Price,
+    pub regular: Price,
+    pub cut:     i64,
+}
+
 // ─────────────────────────────────────────────
 // ENRICHED RESULT — what we return to callers
 // ─────────────────────────────────────────────
@@ -381,4 +416,75 @@ impl ItadClient  {
 
         Ok(results)
     }
+
+    /// Fetch rich game info: tags, release date, review scores, developers.
+    /// Called once per game during enrichment — result stored in DB.
+    pub async fn get_game_info(
+        &self,
+        api_key: &str,
+        itad_id: &str,
+        limiter: &RateLimiter,
+    ) -> Result<GameInfo> {
+        limiter.acquire().await;
+
+        let url = format!("{}/games/info/v2", self.base_url);
+        let response = self.client
+            .get(&url)
+            .query(&[("key", api_key), ("id", itad_id)])
+            .send()
+            .await
+            .map_err(|e| AppError::Api(format!("ITAD info failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::Api(format!(
+                "ITAD info returned {}", response.status()
+            )));
+        }
+
+        response.json::<GameInfo>()
+            .await
+            .map_err(|e| AppError::Parse(format!("Failed to parse game info: {}", e)))
+    }
+
+    /// Fetch Steam price history for a game, filtered to Steam only.
+    /// Returns entries sorted oldest → newest.
+    /// `since` is ISO 8601 e.g. "2024-01-01T00:00:00Z"
+    pub async fn get_price_history(
+        &self,
+        api_key: &str,
+        itad_id: &str,
+        since: &str,
+        limiter: &RateLimiter,
+    ) -> Result<Vec<PriceHistoryEntry>> {
+        limiter.acquire().await;
+
+        let url = format!("{}/games/history/v2", self.base_url);
+        let response = self.client
+            .get(&url)
+            .query(&[
+                ("key",   api_key),
+                ("id",    itad_id),
+                ("shops", "61"),       // Steam only
+                ("since", since),
+            ])
+            .send()
+            .await
+            .map_err(|e| AppError::Api(format!("ITAD history failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::Api(format!(
+                "ITAD history returned {}", response.status()
+            )));
+        }
+
+        let mut entries: Vec<PriceHistoryEntry> = response
+            .json()
+            .await
+            .map_err(|e| AppError::Parse(format!("Failed to parse price history: {}", e)))?;
+
+        // Sort oldest first — better for chart rendering
+        entries.sort_by_key(|e| e.timestamp.clone());
+        Ok(entries)
+    }
+
  }

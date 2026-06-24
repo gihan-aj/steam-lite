@@ -175,6 +175,7 @@ function WishlistCard({ item }: { item: WishlistItem }) {
         : "#9096a8";
 
   const cardBorderColor = item.is_at_regional_low ? "#16a34a55" : "#242736";
+  console.log(`${item.name}: ${item.is_at_regional_low}`);
 
   return (
     <article

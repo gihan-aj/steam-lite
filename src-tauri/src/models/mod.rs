@@ -39,6 +39,20 @@ pub struct WishlistRow {
     pub all_time_low_date:      Option<String>,
     pub predicted_regional_low: Option<i64>,
     pub is_at_regional_low:     i64, 
+    pub steam_review_score:      Option<i64>,
+    pub steam_review_count:      Option<i64>,
+    pub review_label:            Option<String>,
+    pub opencritic_score:        Option<i64>,
+    pub metacritic_score:        Option<i64>,
+    pub release_date:            Option<String>,
+    pub tags:                    Option<String>,   // JSON
+    pub developers:              Option<String>,   // JSON
+    pub itad_id:                 Option<String>,
+    pub avg_sale_interval_days:  Option<i64>,
+    pub typical_discount_min:    Option<i64>,
+    pub typical_discount_max:    Option<i64>,
+    pub last_sale_date:          Option<String>,
+    pub predicted_next_sale:     Option<String>,
 }
 
 /// Raw database row for the `price_history` table.
@@ -149,10 +163,35 @@ pub struct WishlistItem {
     pub is_at_regional_low:     bool,
     pub price_signal:           Option<PriceSignal>,
     pub itad_discrepancy:       Option<i64>,
+    pub steam_review_score:      Option<i64>,
+    pub steam_review_count:      Option<i64>,
+    pub review_label:            Option<String>,
+    pub opencritic_score:        Option<i64>,
+    pub metacritic_score:        Option<i64>,
+    pub release_date:            Option<String>,
+    pub tags:                    Vec<String>,
+    pub developers:              Vec<String>,
+    pub itad_id:                 Option<String>,
+    pub avg_sale_interval_days:  Option<i64>,
+    pub typical_discount_min:    Option<i64>,
+    pub typical_discount_max:    Option<i64>,
+    pub last_sale_date:          Option<String>,
+    pub predicted_next_sale:     Option<String>,
 }
 
 impl From<WishlistRow> for WishlistItem {
     fn from(row: WishlistRow) -> Self {
+
+        let tags: Vec<String> = row.tags
+            .as_deref()
+            .and_then(|t| serde_json::from_str(t).ok())
+            .unwrap_or_default();
+
+        let developers: Vec<String> = row.developers
+            .as_deref()
+            .and_then(|d| serde_json::from_str(d).ok())
+            .unwrap_or_default();
+
         WishlistItem {
             app_id:                 row.app_id,
             name:                   row.name,
@@ -176,6 +215,20 @@ impl From<WishlistRow> for WishlistItem {
             is_at_regional_low:     row.is_at_regional_low != 0,
             price_signal:           None, 
             itad_discrepancy:       None,
+            steam_review_score:     row.steam_review_score,
+            steam_review_count:     row.steam_review_count,
+            review_label:           row.review_label,
+            opencritic_score:       row.opencritic_score,
+            metacritic_score:       row.metacritic_score,
+            release_date:           row.release_date,
+            tags,
+            developers,
+            itad_id:                row.itad_id,
+            avg_sale_interval_days: row.avg_sale_interval_days,
+            typical_discount_min:   row.typical_discount_min,
+            typical_discount_max:   row.typical_discount_max,
+            last_sale_date:         row.last_sale_date,
+            predicted_next_sale:    row.predicted_next_sale,
         }
     }
 }

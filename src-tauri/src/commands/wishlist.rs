@@ -6,8 +6,11 @@ use crate::services::price_intelligence::{
     compute_predicted_regional_low,
     is_at_regional_low,
     compute_price_signal,
-    compute_itad_discrepancy
+    compute_itad_discrepancy,
+    compute_review_label
 };
+use crate::services::sale_analyzer::{analyze_sale_pattern, PricePoint as SalePoint};
+use chrono::{DateTime, Duration, Utc};
 
 /// Fetch the user's Steam wishlist and store it locally.
 /// Returns the list of wishlist items with current prices.
@@ -89,6 +92,20 @@ pub async fn fetch_wishlist(
             is_at_regional_low: false,
             price_signal: None,
             itad_discrepancy: None,
+            steam_review_score:None,
+            steam_review_count:None,
+            review_label:None,
+            opencritic_score:None,
+            metacritic_score:None,
+            release_date:None,
+            tags:vec![],
+            developers:vec![],
+            itad_id:None,
+            avg_sale_interval_days:None,
+            typical_discount_min:None,
+            typical_discount_max:None,
+            last_sale_date:None,
+            predicted_next_sale:None,
         };
 
         // Save to local DB
@@ -170,9 +187,6 @@ pub async fn enrich_wishlist_prices(
     }
 
     let app_ids: Vec<i64> = wishlist.iter().map(|w| w.app_id).collect();
-
-    // Country code for regional pricing — use "lk" for Sri Lanka
-    // We'll make this configurable later
     let country = "lk";
 
     println!("[ITAD] Enriching {} wishlist games...", app_ids.len());
@@ -183,6 +197,16 @@ pub async fn enrich_wishlist_prices(
 
     println!("[ITAD] Got price data for {} games", price_data.len());
 
+    use std::collections::HashMap;
+    let itad_id_map : HashMap<i64, String> = price_data.iter()
+        .map(|d| (d.steam_app_id, d.itad_id.clone()))
+        .collect();
+
+    // "since" = 2 years ago
+    let since = (Utc::now() - Duration::days(730))
+        .format("%Y-%m-%dT%H:%M:%SZ")
+        .to_string(); 
+
     // Update each game in the DB with the historical low
     for data in &price_data {
         // Find the matching wishlist item and update it
@@ -190,38 +214,110 @@ pub async fn enrich_wishlist_prices(
             let mut updated = item.clone();
 
             updated.steam_historical_cut = data.steam_low_cut;
-
             updated.steam_historical_date = data.steam_low_timestamp
                 .as_ref()
                 .and_then(|ts| ts.get(..7))  // "2026-06"
                 .map(|s| s.to_string());
 
-            updated.all_time_low_cut  = data.historical_low_cut;
-            updated.all_time_low_shop = data.historical_low_shop.clone();
-            updated.all_time_low_date = data.historical_low
-                .as_ref()
-                .and_then(|_| data.historical_low_timestamp.as_ref())
-                .and_then(|ts| ts.get(..7))
-                .map(|s| s.to_string());
+            if data.historical_low.is_some() {
+                updated.all_time_low_cut  = data.historical_low_cut;
+                updated.all_time_low_shop = data.historical_low_shop.clone();
+                updated.all_time_low_date = data.historical_low
+                    .as_ref()
+                    .and_then(|_| data.historical_low_timestamp.as_ref())
+                    .and_then(|ts| ts.get(..7))
+                    .map(|s| s.to_string());
+            }
 
             updated.predicted_regional_low = compute_predicted_regional_low(&updated);
-
             updated.is_at_regional_low = is_at_regional_low(&updated);
-
             updated.historical_low = updated.predicted_regional_low;
 
-            let signal = compute_price_signal(&updated);
+            updated.itad_id = Some(data.itad_id.clone());
 
+            let game_info = state.itad.get_game_info(&itad_key, &data.itad_id, &state.limits.itad).await?;
+            if let Some(reviews) = &game_info.reviews {
+                if let Some(steam_review) = reviews.iter().find(|r| r.source == "Steam") {
+                    let count = steam_review.count.unwrap_or(0);
+                    updated.steam_review_score = Some(steam_review.score);
+                    updated.steam_review_count = Some(count);
+                    updated.review_label = Some(
+                        compute_review_label(steam_review.score, count).to_string()
+                    );
+
+                    // Backfill the old fields too
+                    updated.reviews_percent = Some(steam_review.score);
+                    updated.reviews_total   = Some(count);
+                    updated.review_summary  = updated.review_label.clone();
+                }
+                if let Some(oc) = reviews.iter().find(|r| r.source == "OpenCritic") {
+                    updated.opencritic_score = Some(oc.score);
+                }
+                if let Some(mc) = reviews.iter().find(|r| r.source == "Metascore") {
+                    updated.metacritic_score = Some(mc.score);
+                }
+            }
+
+            updated.release_date = game_info.release_date;
+
+            if let Some(tags) = game_info.tags {
+                updated.tags = tags;
+            }
+
+            if let Some(devs) = game_info.developers {
+                let names: Vec<String> = devs.iter().map(|d| d.name.clone()).collect();
+                updated.developers = names;
+            }
+
+            let price_history = state.itad.get_price_history(&itad_key, &data.itad_id, &since, &state.limits.itad).await?;
+            if price_history.len() > 0 {
+                for entry in &price_history {
+                    if let Ok(ts) = entry.timestamp.parse::<chrono::DateTime<Utc>>() {
+                        let _ = state.prices.insert(&crate::models::PricePoint {
+                            app_id:           data.steam_app_id,
+                            price:            entry.deal.price.amount_int,
+                            discount_percent: entry.deal.cut,
+                            recorded_at:      ts,
+                            source:           "itad_history".to_string(),
+                        }).await;
+                    }
+                }
+
+                // Convert to SalePoints for analysis
+                let sale_points: Vec<SalePoint> = price_history.iter()
+                    .filter_map(|e| {
+                        e.timestamp.parse::<DateTime<Utc>>().ok()
+                            .map(|ts| SalePoint { timestamp: ts, cut: e.deal.cut })
+                    })
+                    .collect();
+
+                let pattern = analyze_sale_pattern(&sale_points);
+
+                updated.avg_sale_interval_days = pattern.avg_interval_days;
+                updated.typical_discount_min   = pattern.typical_min_cut;
+                updated.typical_discount_max   = pattern.typical_max_cut;
+                updated.last_sale_date         = pattern.last_sale_date;
+                updated.predicted_next_sale    = pattern.predicted_next;
+
+                println!(
+                    "[ITAD] {} — {} sales, avg interval: {:?} days, next: {:?}",
+                    updated.name, pattern.sale_count,
+                    pattern.avg_interval_days, updated.predicted_next_sale
+                );
+            }
+            
+
+            let signal = compute_price_signal(&updated);
             updated.price_signal = Some(signal);
 
-            println!(
-                "[ITAD] {} — steam cut: {:?}%, regional base: {:?}, predicted low: {:?}, at low: {}",
-                updated.name,
-                updated.steam_historical_cut,
-                updated.original_price.map(|p| format!("${:.2}", p as f64 / 100.0)),
-                updated.predicted_regional_low.map(|p| format!("${:.2}", p as f64 / 100.0)),
-                updated.is_at_regional_low,
-            );
+            // println!(
+            //     "[ITAD] {} — steam cut: {:?}%, regional base: {:?}, predicted low: {:?}, at low: {}",
+            //     updated.name,
+            //     updated.steam_historical_cut,
+            //     updated.original_price.map(|p| format!("${:.2}", p as f64 / 100.0)),
+            //     updated.predicted_regional_low.map(|p| format!("${:.2}", p as f64 / 100.0)),
+            //     updated.is_at_regional_low,
+            // );
 
             state.wishlist.upsert(&updated).await?;
         }

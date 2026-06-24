@@ -46,6 +46,20 @@ export interface WishlistItem {
   is_at_regional_low: boolean;
   price_signal: PriceSignal | null;
   itad_discrepancy: number | null;
+  steam_review_score: number | null;
+  steam_review_count: number | null;
+  review_label: string | null;
+  opencritic_score: number | null;
+  metacritic_score: number | null;
+  release_date: string | null;
+  tags: string[];
+  developers: string[];
+  itad_id: string | null;
+  avg_sale_interval_days: number | null;
+  typical_discount_min: number | null;
+  typical_discount_max: number | null;
+  last_sale_date: string | null;
+  predicted_next_sale: string | null;
 }
 
 export interface PriceSignal {

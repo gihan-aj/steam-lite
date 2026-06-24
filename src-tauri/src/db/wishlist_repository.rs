@@ -22,7 +22,12 @@ impl WishlistRepository {
                 discount_percent, header_image, short_description,
                 steam_historical_cut, steam_historical_date,
                 all_time_low_cut, all_time_low_shop, all_time_low_date,
-                predicted_regional_low, is_at_regional_low
+                predicted_regional_low, is_at_regional_low,
+                steam_review_score, steam_review_count, review_label,
+                opencritic_score, metacritic_score,
+                release_date, tags, developers, itad_id,
+                avg_sale_interval_days, typical_discount_min,
+                typical_discount_max, last_sale_date, predicted_next_sale
             FROM wishlist
             ORDER BY name ASC
             "#
@@ -37,7 +42,12 @@ impl WishlistRepository {
 
     pub async fn upsert(&self, item: &WishlistItem) -> Result<()> {
         let is_at_regional_low = item.is_at_regional_low as i64;
-        
+        let tags = serde_json::to_string(&item.tags).ok()
+                .and_then(|s| if s == "null" { None } else { Some(s) });
+        let devs = serde_json::to_string(&item.developers).ok()
+                .and_then(|s| if s == "null" { None } else { Some(s) });
+
+
         sqlx::query!(
             r#"
             INSERT OR REPLACE INTO wishlist (
@@ -47,10 +57,16 @@ impl WishlistRepository {
                 steam_historical_cut, steam_historical_date,
                 all_time_low_cut, all_time_low_shop, all_time_low_date,
                 predicted_regional_low, is_at_regional_low,
+                steam_review_score, steam_review_count, review_label,
+                opencritic_score, metacritic_score,
+                release_date, tags, developers, itad_id,
+                avg_sale_interval_days, typical_discount_min,
+                typical_discount_max, last_sale_date, predicted_next_sale,
                 last_checked
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 CURRENT_TIMESTAMP
             )
             "#,
@@ -73,6 +89,20 @@ impl WishlistRepository {
             item.all_time_low_date,
             item.predicted_regional_low,
             is_at_regional_low,
+            item.steam_review_score,
+            item.steam_review_count,
+            item.review_label,
+            item.opencritic_score,
+            item.metacritic_score,
+            item.release_date,
+            tags,
+            devs,
+            item.itad_id,
+            item.avg_sale_interval_days,
+            item.typical_discount_min,
+            item.typical_discount_max,
+            item.last_sale_date,
+            item.predicted_next_sale
         )
         .execute(&self.pool)
         .await?;
