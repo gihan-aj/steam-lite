@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { WishlistItem } from "../types";
+import { PricePoint, WishlistItem } from "../types";
 
 const WISHLIST_KEY = ["wishlist"] as const;
 
@@ -32,5 +32,14 @@ export function useEnrichWishlist() {
     onSuccess: (data) => {
       queryClient.setQueryData(["wishlist"], data);
     },
+  });
+}
+
+export function useGamePriceHistory(appId: number | null) {
+  return useQuery({
+    queryKey: ["price_history", appId],
+    queryFn: () => invoke<PricePoint[]>("get_game_price_history", { appId }),
+    enabled: appId != null, // only fetch when a game is selected
+    staleTime: 5 * 60 * 1000,
   });
 }

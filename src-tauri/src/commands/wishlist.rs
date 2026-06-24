@@ -1,5 +1,5 @@
 use tauri::State;
-use crate::AppState;
+use crate::{AppState, models};
 use crate::models::{WishlistItem};
 use crate::error::AppError;
 use crate::services::price_intelligence::{
@@ -365,4 +365,14 @@ pub async fn enrich_wishlist_prices(
     // Return freshly updated wishlist from DB
     // state.wishlist.get_all().await
     Ok(wishlist)
+}
+
+/// Fetch stored price history for a specific game.
+/// Used by the game detail panel to render the price chart.
+#[tauri::command]
+pub async fn get_game_price_history(
+    state: State<'_, AppState>, 
+    app_id: i64
+) -> Result<Vec<crate::models::PricePoint>, AppError> {
+  state.prices.get_history(app_id).await
 }

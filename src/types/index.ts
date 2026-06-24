@@ -68,6 +68,21 @@ export interface PriceSignal {
   detail: string | null;
 }
 
+export interface PricePoint {
+  app_id: number;
+  price: number;
+  discount_percent: number;
+  recorded_at: string; // ISO timestamp string
+  source: string;
+}
+
+export interface ChartPoint {
+  date: string; // "Jun 2026"
+  cut: number; // 65
+  regional_price: number; // 1224 (cents)
+  source: string;
+}
+
 export interface BuyRecommendation {
   action: string;
   wait_score: number;

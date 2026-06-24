@@ -85,6 +85,7 @@ pub fn run() {
             commands::wishlist::get_wishlist, 
             commands::wishlist::remove_from_wishlist,
             commands::wishlist::enrich_wishlist_prices,
+            commands::wishlist::get_game_price_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

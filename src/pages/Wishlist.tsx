@@ -6,6 +6,8 @@ import {
 } from "../hooks/useWishlist";
 import { useSettings } from "../hooks/useSettings";
 import { WishlistItem, formatPrice, getReviewDisplay } from "../types";
+import { useState } from "react";
+import { GameDetailPanel } from "../components/GameDetailPanel";
 
 export function Wishlist() {
   const { data: settings } = useSettings();
@@ -13,10 +15,12 @@ export function Wishlist() {
   const fetch = useFetchWishlist();
   const enrich = useEnrichWishlist();
 
+  const [selectedGame, setSelectedGame] = useState<WishlistItem | null>(null);
+
   const hasSteamId = !!settings?.steam_id;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ position: "relative" }}>
       {/* Header */}
       <div
         style={{
@@ -136,13 +140,28 @@ export function Wishlist() {
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
               gap: 12,
+              // Shrink grid when panel is open — leaves room for panel
+              paddingRight: selectedGame ? 430 : 0,
+              transition: "padding-right 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             {items.map((item) => (
-              <WishlistCard key={item.app_id} item={item} />
+              <div
+                key={item.app_id}
+                onClick={() => setSelectedGame(item)}
+                style={{ cursor: "pointer" }}
+              >
+                <WishlistCard item={item} />
+              </div>
             ))}
           </div>
         )}
+
+        {/* Detail panel — slides in from right */}
+        <GameDetailPanel
+          game={selectedGame}
+          onClose={() => setSelectedGame(null)}
+        />
       </div>
     </div>
   );
