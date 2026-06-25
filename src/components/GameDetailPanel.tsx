@@ -93,7 +93,9 @@ export function GameDetailPanel({ game, onClose }: GameDetailPanelProps) {
           overflowY: "auto",
           // Slide in/out animation
           transform: isOpen ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "transform 0.2s ease-out",
+          // transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          willChange: "transform", // Hardware acceleration hint — prevents paint stutter
         }}
         // Prevent backdrop click from firing when clicking inside panel
         onClick={(e) => e.stopPropagation()}

@@ -43,42 +43,51 @@ export function Wishlist() {
           </p>
         </div>
 
-        <button
-          onClick={() => fetch.mutate()}
-          disabled={fetch.isPending || !hasSteamId}
-          title={!hasSteamId ? "Add your Steam ID in Settings first" : ""}
+        <div
           style={{
-            background: hasSteamId ? "#3d6ef8" : "#1c1e27",
-            color: hasSteamId ? "#fff" : "#5a5f72",
-            border: hasSteamId ? "none" : "1px solid #2a2d3a",
-            borderRadius: 8,
-            padding: "7px 14px",
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: !hasSteamId || fetch.isPending ? "not-allowed" : "pointer",
-            opacity: fetch.isPending ? 0.7 : 1,
+            display: "flex",
+            alignItems: "end",
+            gap: 12,
           }}
         >
-          {fetch.isPending ? "Fetching…" : "↻ Sync wishlist"}
-        </button>
+          <button
+            onClick={() => fetch.mutate()}
+            disabled={fetch.isPending || !hasSteamId}
+            title={!hasSteamId ? "Add your Steam ID in Settings first" : ""}
+            style={{
+              background: hasSteamId ? "#3d6ef8" : "#1c1e27",
+              color: hasSteamId ? "#fff" : "#5a5f72",
+              border: hasSteamId ? "none" : "1px solid #2a2d3a",
+              borderRadius: 8,
+              padding: "7px 14px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor:
+                !hasSteamId || fetch.isPending ? "not-allowed" : "pointer",
+              opacity: fetch.isPending ? 0.7 : 1,
+            }}
+          >
+            {fetch.isPending ? "Fetching…" : "↻ Sync wishlist"}
+          </button>
 
-        <button
-          onClick={() => enrich.mutate()}
-          disabled={enrich.isPending || !hasSteamId}
-          style={{
-            background: "transparent",
-            color: "#3d6ef8",
-            border: "1px solid #3d6ef8",
-            borderRadius: 8,
-            padding: "7px 14px",
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: enrich.isPending ? "not-allowed" : "pointer",
-            opacity: enrich.isPending ? 0.7 : 1,
-          }}
-        >
-          {enrich.isPending ? "Fetching prices…" : "★ Enrich prices"}
-        </button>
+          <button
+            onClick={() => enrich.mutate()}
+            disabled={enrich.isPending || !hasSteamId}
+            style={{
+              background: "transparent",
+              color: "#3d6ef8",
+              border: "1px solid #3d6ef8",
+              borderRadius: 8,
+              padding: "7px 14px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: enrich.isPending ? "not-allowed" : "pointer",
+              opacity: enrich.isPending ? 0.7 : 1,
+            }}
+          >
+            {enrich.isPending ? "Fetching prices…" : "★ Enrich prices"}
+          </button>
+        </div>
       </div>
 
       {/* No Steam ID state */}
@@ -139,10 +148,11 @@ export function Wishlist() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gridAutoRows: "1fr",
               gap: 12,
               // Shrink grid when panel is open — leaves room for panel
-              paddingRight: selectedGame ? 430 : 0,
-              transition: "padding-right 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              // paddingRight: selectedGame ? 430 : 0,
+              // transition: "padding-right 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             {items.map((item) => (
@@ -189,7 +199,6 @@ function WishlistCard({ item }: { item: WishlistItem }) {
   const review = getReviewDisplay(item);
 
   const cardBorderColor = item.is_at_regional_low ? "#16a34a55" : "#242736";
-  console.log(`${item.name}: ${item.is_at_regional_low}`);
 
   return (
     <article
@@ -197,13 +206,11 @@ function WishlistCard({ item }: { item: WishlistItem }) {
         background: "#1c1e27",
         border: `1px solid ${cardBorderColor}`,
         borderRadius: 12,
-        // 🔑 No overflow:hidden here — let content grow freely
-        // overflow:hidden is on the image wrapper only
         display: "flex",
         flexDirection: "column",
         transition: "border-color 0.15s, transform 0.15s",
         cursor: "pointer",
-        // Card always tall enough to show all content
+        height: "100%",
         minHeight: 320,
       }}
       onMouseEnter={(e) => {
