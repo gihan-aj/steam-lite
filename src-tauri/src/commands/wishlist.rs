@@ -34,7 +34,7 @@ pub async fn fetch_wishlist(
     )?;
 
     // TODO: make configurable later
-    let country_code = "lk";
+    let country_code = &settings.country_code.as_str();
 
     println!("[INFO] Fetching wishlist for Steam ID: {}", steam_id);
 
@@ -179,6 +179,7 @@ pub async fn enrich_wishlist_prices(
             "ITAD API key not set. Add it in Settings to see historical prices.".to_string()
         )
     )?;
+    let country = &settings.country_code.as_str();
 
     // Load wishlist from DB
     let wishlist = state.wishlist.get_all().await?;
@@ -187,7 +188,6 @@ pub async fn enrich_wishlist_prices(
     }
 
     let app_ids: Vec<i64> = wishlist.iter().map(|w| w.app_id).collect();
-    let country = "lk";
 
     println!("[ITAD] Enriching {} wishlist games...", app_ids.len());
 

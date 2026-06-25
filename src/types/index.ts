@@ -94,6 +94,7 @@ export interface UserSettings {
   steam_id: string | null;
   steam_api_key: string | null;
   itad_api_key: string | null;
+  country_code: string;
   min_review_score: number;
   min_discount_percent: number;
   sync_interval_hours: number;

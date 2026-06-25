@@ -51,10 +51,16 @@ impl SettingsRepository {
             .map(|r| r.value)
             .filter(|v| !v.is_empty());
 
+        let country_code = get("country_code").await?
+            .map(|r| r.value)
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| "lk".to_string()); 
+
         Ok(UserSettings {
             steam_id,
             steam_api_key,
             itad_api_key,
+            country_code,
             min_review_score: min_score,
             min_discount_percent: min_discount,
             sync_interval_hours: sync_interval,
@@ -92,6 +98,7 @@ impl SettingsRepository {
             self.set("itad_api_key", key).await?;
         }
 
+        self.set("country_code", &settings.country_code).await?;
         self.set("min_review_score", &settings.min_review_score.to_string()).await?;
         self.set("min_discount_percent", &settings.min_discount_percent.to_string()).await?;
         self.set("sync_interval_hours", &settings.sync_interval_hours.to_string()).await?;

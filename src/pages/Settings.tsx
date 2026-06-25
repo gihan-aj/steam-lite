@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSettings, useSaveSettings } from "../hooks/useSettings";
 import { UserSettings } from "../types";
+import { CountrySelect } from "../components/CountrySelect";
 
 export function Settings() {
   const { data: settings, isLoading } = useSettings();
@@ -11,6 +12,7 @@ export function Settings() {
     steam_id: null,
     steam_api_key: null,
     itad_api_key: null,
+    country_code: "lk",
     min_review_score: 90,
     min_discount_percent: 50,
     sync_interval_hours: 24,
@@ -185,6 +187,18 @@ export function Settings() {
                 }}
                 onFocus={(e) => (e.target.style.borderColor = "#3d6ef8")}
                 onBlur={(e) => (e.target.style.borderColor = "#2a2d3a")}
+              />
+            </Field>
+
+            <Field
+              label="Your Region"
+              description="Used for Steam regional prices. Changes take effect on next wishlist sync."
+            >
+              <CountrySelect
+                value={form.country_code}
+                onChange={(code) =>
+                  setForm((f) => ({ ...f, country_code: code }))
+                }
               />
             </Field>
 

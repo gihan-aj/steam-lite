@@ -301,6 +301,9 @@ pub struct UserSettings {
 
     /// Is There Any Deal API key (optional for some features)
     pub itad_api_key:           Option<String>,
+
+    /// The user's country code
+    pub country_code:           String,
  
     /// Minimum review score % to show in recommendations (default: 90)
     pub min_review_score:       f64,
@@ -328,6 +331,7 @@ impl Default for UserSettings {
             steam_id: None,  
             steam_api_key: None,
             itad_api_key: None,
+            country_code: "lk".to_string(),
             min_review_score: 90.0,
             min_discount_percent: 50,
             sync_interval_hours: 24,
