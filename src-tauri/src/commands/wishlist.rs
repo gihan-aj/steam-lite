@@ -1,5 +1,5 @@
 use tauri::State;
-use crate::{AppState, models};
+use crate::{AppState};
 use crate::models::{WishlistItem};
 use crate::error::AppError;
 use crate::services::price_intelligence::{
@@ -33,7 +33,6 @@ pub async fn fetch_wishlist(
         AppError::NotFound("Steam API key not set. Add it in Settings.".to_string())
     )?;
 
-    // TODO: make configurable later
     let country_code = &settings.country_code.as_str();
 
     println!("[INFO] Fetching wishlist for Steam ID: {}", steam_id);
@@ -46,6 +45,8 @@ pub async fn fetch_wishlist(
             &country_code,
             &state.limits.steam_store
         ).await?;
+
+    let fetched_ids: Vec<i64> = raw_items.iter().map(|(id, _, _)| *id).collect();
 
     let mut wishlist_items: Vec<WishlistItem> = Vec::new();
 
@@ -69,48 +70,67 @@ pub async fn fetch_wishlist(
         let short_description = Some(details.short_description.clone())
             .filter(|s| !s.is_empty());
 
+        let existing = state.wishlist.get_by_id(*app_id).await?;
+
         let item = WishlistItem {
             app_id: *app_id,
             name: details.name.clone(),
-            review_summary: None,       // not in appdetails basic filter
-            reviews_percent: None,
-            reviews_total: None,
             date_added: Some(*date_added),
             current_price,
             original_price,
-            historical_low: None,
             discount_percent,
-            buy_recommendation: None,
             header_image,
             short_description,
-            steam_historical_cut: None,
-            steam_historical_date: None,
-            all_time_low_cut: None,
-            all_time_low_shop: None,
-            all_time_low_date: None,
-            predicted_regional_low: None,
-            is_at_regional_low: false,
-            price_signal: None,
-            itad_discrepancy: None,
-            steam_review_score:None,
-            steam_review_count:None,
-            review_label:None,
-            opencritic_score:None,
-            metacritic_score:None,
-            release_date:None,
-            tags:vec![],
-            developers:vec![],
-            itad_id:None,
-            avg_sale_interval_days:None,
-            typical_discount_min:None,
-            typical_discount_max:None,
-            last_sale_date:None,
-            predicted_next_sale:None,
+
+            // ── Carry forward enriched fields if they exist ──────────
+            // These come from ITAD enrichment — don't overwrite with None
+            review_summary:         existing.as_ref().and_then(|e| e.review_summary.clone()),
+            reviews_percent:        existing.as_ref().and_then(|e| e.reviews_percent),
+            reviews_total:          existing.as_ref().and_then(|e| e.reviews_total),
+            historical_low:         existing.as_ref().and_then(|e| e.historical_low),
+            steam_historical_cut:   existing.as_ref().and_then(|e| e.steam_historical_cut),
+            steam_historical_date:  existing.as_ref().and_then(|e| e.steam_historical_date.clone()),
+            all_time_low_cut:       existing.as_ref().and_then(|e| e.all_time_low_cut),
+            all_time_low_shop:      existing.as_ref().and_then(|e| e.all_time_low_shop.clone()),
+            all_time_low_date:      existing.as_ref().and_then(|e| e.all_time_low_date.clone()),
+            predicted_regional_low: existing.as_ref().and_then(|e| e.predicted_regional_low),
+            is_at_regional_low:     existing.as_ref().map(|e| e.is_at_regional_low).unwrap_or(false),
+            steam_review_score:     existing.as_ref().and_then(|e| e.steam_review_score),
+            steam_review_count:     existing.as_ref().and_then(|e| e.steam_review_count),
+            review_label:           existing.as_ref().and_then(|e| e.review_label.clone()),
+            opencritic_score:       existing.as_ref().and_then(|e| e.opencritic_score),
+            metacritic_score:       existing.as_ref().and_then(|e| e.metacritic_score),
+            release_date:           existing.as_ref().and_then(|e| e.release_date.clone()),
+            tags:                   existing.as_ref().map(|e| e.tags.clone()).unwrap_or_default(),
+            developers:             existing.as_ref().map(|e| e.developers.clone()).unwrap_or_default(),
+            itad_id:                existing.as_ref().and_then(|e| e.itad_id.clone()),
+            avg_sale_interval_days: existing.as_ref().and_then(|e| e.avg_sale_interval_days),
+            typical_discount_min:   existing.as_ref().and_then(|e| e.typical_discount_min),
+            typical_discount_max:   existing.as_ref().and_then(|e| e.typical_discount_max),
+            last_sale_date:         existing.as_ref().and_then(|e| e.last_sale_date.clone()),
+            predicted_next_sale:    existing.as_ref().and_then(|e| e.predicted_next_sale.clone()),
+
+            // ── Computed fields — always None here, attached below ───
+            buy_recommendation: None,
+            price_signal:       None,
+            itad_discrepancy:   None,
         };
+
+        let mut item = item;
+        item.predicted_regional_low = compute_predicted_regional_low(&item);
+        item.is_at_regional_low     = is_at_regional_low(&item);
+        item.historical_low         = item.predicted_regional_low;
 
         // Save to local DB
         state.wishlist.upsert(&item).await?;
         wishlist_items.push(item);
+    }
+
+    match state.wishlist.delete_removed(&fetched_ids).await {
+        Ok(0)       => println!("[INFO] Wishlist sync: no removed games"),
+        Ok(removed) => println!("[INFO] Wishlist sync: removed {} games no longer wishlisted", removed),
+        Err(e)      => println!("[WARN] Failed to clean up removed wishlist games: {}", e),
+        // Don't fail the whole sync for a cleanup error
     }
 
     for item in &mut wishlist_items {

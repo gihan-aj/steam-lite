@@ -30,8 +30,8 @@ pub struct LookupResponse {
 pub struct ItadGame {
     /// ITAD's internal UUID for this game — used for all other endpoints
     pub id: String,
-    pub slug: String,
-    pub title: String,
+    // pub slug: String,
+    // pub title: String,
 }
 
 /// One item from the /games/historylow/v1 response
