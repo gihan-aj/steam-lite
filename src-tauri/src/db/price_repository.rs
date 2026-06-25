@@ -15,7 +15,7 @@ impl PriceRepository {
     pub async fn insert(&self, point: &PricePoint) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO price_history (app_id, price, discount_percent, recorded_at, source)
+            INSERT OR IGNORE INTO price_history (app_id, price, discount_percent, recorded_at, source)
             VALUES (?, ?, ?, ?, ?)
             "#,
             point.app_id,
@@ -69,5 +69,41 @@ impl PriceRepository {
         // "if None, return None"
         // It's like chaining .map() but flattens nested Options.
         // Equivalent to: if let Some(r) = row { r.low } else { None }
+    }
+
+    /// Get the most recent price record for a game.
+    /// Used to detect if the price has changed since last check.
+    pub async fn get_latest(&self, app_id: i64) -> Result<Option<PricePoint>> {
+        let row = sqlx::query_as!(
+            PriceRow,
+            r#"
+            SELECT
+                app_id, price, discount_percent,
+                recorded_at as "recorded_at: chrono::DateTime<chrono::Utc>",
+                source
+            FROM price_history
+            WHERE app_id = ?
+            ORDER BY recorded_at DESC
+            LIMIT 1
+            "#,
+            app_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|r| r.into()))
+    }
+
+    /// Check whether we have ANY history records for a game.
+    /// Used to decide whether to bootstrap from ITAD or skip.
+    pub async fn has_history(&self, app_id: i64) -> Result<bool> {
+        let row = sqlx::query!(
+            "SELECT COUNT(*) as count FROM price_history WHERE app_id = ?",
+            app_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(row.count > 0)
     }
 }

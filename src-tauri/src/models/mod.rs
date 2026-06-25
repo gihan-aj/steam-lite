@@ -53,6 +53,7 @@ pub struct WishlistRow {
     pub typical_discount_max:    Option<i64>,
     pub last_sale_date:          Option<String>,
     pub predicted_next_sale:     Option<String>,
+    pub itad_history_bootstrapped: i64,
 }
 
 /// Raw database row for the `price_history` table.
@@ -177,6 +178,7 @@ pub struct WishlistItem {
     pub typical_discount_max:    Option<i64>,
     pub last_sale_date:          Option<String>,
     pub predicted_next_sale:     Option<String>,
+    pub itad_history_bootstrapped: bool,
 }
 
 impl From<WishlistRow> for WishlistItem {
@@ -229,6 +231,7 @@ impl From<WishlistRow> for WishlistItem {
             typical_discount_max:   row.typical_discount_max,
             last_sale_date:         row.last_sale_date,
             predicted_next_sale:    row.predicted_next_sale,
+            itad_history_bootstrapped: row.itad_history_bootstrapped != 0,
         }
     }
 }

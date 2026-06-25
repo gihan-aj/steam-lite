@@ -27,7 +27,7 @@ impl WishlistRepository {
                 opencritic_score, metacritic_score,
                 release_date, tags, developers, itad_id,
                 avg_sale_interval_days, typical_discount_min,
-                typical_discount_max, last_sale_date, predicted_next_sale
+                typical_discount_max, last_sale_date, predicted_next_sale, itad_history_bootstrapped
             FROM wishlist
             ORDER BY name ASC
             "#
@@ -68,7 +68,7 @@ impl WishlistRepository {
                 opencritic_score, metacritic_score,
                 release_date, tags, developers, itad_id,
                 avg_sale_interval_days, typical_discount_min,
-                typical_discount_max, last_sale_date, predicted_next_sale
+                typical_discount_max, last_sale_date, predicted_next_sale, itad_history_bootstrapped
             FROM wishlist
             WHERE app_id = ?
             "#,
@@ -101,12 +101,12 @@ impl WishlistRepository {
                 opencritic_score, metacritic_score,
                 release_date, tags, developers, itad_id,
                 avg_sale_interval_days, typical_discount_min,
-                typical_discount_max, last_sale_date, predicted_next_sale,
+                typical_discount_max, last_sale_date, predicted_next_sale, itad_history_bootstrapped,
                 last_checked
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 CURRENT_TIMESTAMP
             )
             "#,
@@ -142,7 +142,8 @@ impl WishlistRepository {
             item.typical_discount_min,
             item.typical_discount_max,
             item.last_sale_date,
-            item.predicted_next_sale
+            item.predicted_next_sale,
+            item.itad_history_bootstrapped
         )
         .execute(&self.pool)
         .await?;

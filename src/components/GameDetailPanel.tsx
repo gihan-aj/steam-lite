@@ -70,6 +70,7 @@ export function GameDetailPanel({
       }
       return acc;
     }, []);
+  console.log(chartData);
 
   const review = game ? getReviewDisplay(game) : null;
 
