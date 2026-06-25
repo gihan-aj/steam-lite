@@ -211,6 +211,10 @@ impl ItadClient  {
             .await
             .map_err(|e| AppError::Parse(format!("Failed to parse ITAD lookup: {}", e)))?;
 
+        if !data.found {
+            return Ok(None);
+        }
+
         Ok(data.game.map(|g| g.id))
     }
 

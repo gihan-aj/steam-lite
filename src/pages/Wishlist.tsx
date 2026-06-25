@@ -177,7 +177,13 @@ export function Wishlist() {
   );
 }
 
-function WishlistCard({ item }: { item: WishlistItem }) {
+function WishlistCard({
+  item,
+  regionCode = "LK",
+}: {
+  item: WishlistItem;
+  regionCode?: string;
+}) {
   const hasDiscount = (item.discount_percent ?? 0) > 0;
   const hasHistory = item.steam_historical_cut !== null;
   const hasOtherShop =
@@ -386,7 +392,9 @@ function WishlistCard({ item }: { item: WishlistItem }) {
             {formatPrice(item.current_price)}
           </span>
         )}
-        <span style={{ fontSize: 10, color: "#3a3f58" }}>LK regional</span>
+        <span style={{ fontSize: 10, color: "#3a3f58" }}>
+          {regionCode} regional
+        </span>
       </div>
 
       {/* ── Signal banner — BEFORE price rows so position is consistent ── */}
@@ -443,7 +451,7 @@ function WishlistCard({ item }: { item: WishlistItem }) {
             isMatch={item.is_at_regional_low}
             note={item.is_at_regional_low ? "← you are here" : undefined}
             noteColor="#4ade80"
-            tooltipText="Steam's best ever discount × your LK regional base price"
+            tooltipText={`Steam's best ever discount × your ${regionCode} regional base price`}
           />
           <PriceRow
             label="Other shops"
@@ -451,7 +459,7 @@ function WishlistCard({ item }: { item: WishlistItem }) {
             cut={item.all_time_low_cut}
             date={item.all_time_low_date}
             shopName={item.all_time_low_shop}
-            note="⚠ may not ship to LK"
+            note={`⚠ may not ship to ${regionCode}`}
             noteColor="#4a5070"
             tooltipText="May not be available in your region or use Steam regional pricing"
           />

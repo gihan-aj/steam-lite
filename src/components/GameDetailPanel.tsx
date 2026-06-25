@@ -1,14 +1,33 @@
 import { useEffect, useRef } from "react";
-import { ChartPoint, formatPrice, getReviewDisplay, WishlistItem } from "../types";
+import {
+  ChartPoint,
+  formatPrice,
+  getReviewDisplay,
+  WishlistItem,
+} from "../types";
 import { useGamePriceHistory } from "../hooks/useWishlist";
-import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface GameDetailPanelProps {
   game: WishlistItem | null;
   onClose: () => void;
+  regionCode?: string;
 }
 
-export function GameDetailPanel({ game, onClose }: GameDetailPanelProps) {
+export function GameDetailPanel({
+  game,
+  onClose,
+  regionCode = "LK",
+}: GameDetailPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const { data: priceHistory } = useGamePriceHistory(game?.app_id ?? null);
 
@@ -107,6 +126,7 @@ export function GameDetailPanel({ game, onClose }: GameDetailPanelProps) {
             review={review}
             onClose={onClose}
             hasMultipleReviews={hasMultipleReviews}
+            regionCode={regionCode}
           />
         )}
       </div>
@@ -121,12 +141,14 @@ function PanelContent({
   review,
   onClose,
   hasMultipleReviews,
+  regionCode = "LK",
 }: {
   game: WishlistItem;
   chartData: ChartPoint[];
   review: { label: string; color: string } | null;
   onClose: () => void;
   hasMultipleReviews: boolean;
+  regionCode?: string;
 }) {
   const hasDiscount = (game.discount_percent ?? 0) > 0;
   const hasSalePattern = game.avg_sale_interval_days != null;
@@ -282,7 +304,7 @@ function PanelContent({
             )}
 
             {/* OpenCritic */}
-            {game.opencritic_score !== null && (
+            {hasMultipleReviews && game.opencritic_score !== null && (
               <ReviewBar
                 source="OpenCritic"
                 score={game.opencritic_score}
@@ -297,7 +319,7 @@ function PanelContent({
             )}
 
             {/* Metacritic */}
-            {game.metacritic_score !== null && (
+            {hasMultipleReviews && game.metacritic_score !== null && (
               <ReviewBar
                 source="Metacritic"
                 score={game.metacritic_score}
@@ -314,7 +336,7 @@ function PanelContent({
         </Section>
 
         {/* ── Your Price ────────────────────────────── */}
-        <Section title="Your Price (LK Regional)">
+        <Section title={`Your Price (${regionCode} Regional)`}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             {hasDiscount && game.original_price ? (
               <>
@@ -369,7 +391,7 @@ function PanelContent({
               }}
             >
               <PriceCompareRow
-                label="Steam historical low (LK)"
+                label={`Steam historical low (${regionCode})`}
                 price={game.predicted_regional_low}
                 cut={game.steam_historical_cut}
                 date={game.steam_historical_date}
@@ -380,7 +402,7 @@ function PanelContent({
                   label={`Other shops · ${game.all_time_low_shop}`}
                   cut={game.all_time_low_cut}
                   date={game.all_time_low_date}
-                  warning="⚠ may not ship to LK"
+                  warning={`⚠ may not ship to ${regionCode}`}
                 />
               )}
             </div>
@@ -389,7 +411,7 @@ function PanelContent({
 
         {/* ── Price History Chart ───────────────────── */}
         {chartData.length > 1 && (
-          <Section title="Steam Price History (LK)">
+          <Section title={`Steam Price History (${regionCode})`}>
             <div style={{ height: 160, marginTop: 4 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
@@ -433,7 +455,10 @@ function PanelContent({
                   />
                   <Tooltip
                     content={
-                      <ChartTooltip originalPrice={game.original_price} />
+                      <ChartTooltip
+                        originalPrice={game.original_price}
+                        regionCode={regionCode}
+                      />
                     }
                   />
                   {/* Reference line at current discount */}
@@ -475,7 +500,7 @@ function PanelContent({
         )}
 
         {chartData.length <= 1 && (
-          <Section title="Steam Price History (LK)">
+          <Section title={`Steam Price History (${regionCode})`}>
             <p style={{ fontSize: 12, color: "#5a5f72", padding: "12px 0" }}>
               {chartData.length === 0
                 ? "No history yet — click ★ Enrich to fetch from ITAD"
@@ -787,10 +812,12 @@ function ChartTooltip({
   active,
   payload,
   originalPrice,
+  regionCode = "LK",
 }: {
   active?: boolean;
   payload?: Array<{ value: number; payload: ChartPoint }>;
   originalPrice?: number | null;
+  regionCode?: string;
 }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
@@ -816,7 +843,7 @@ function ChartTooltip({
       </span>
       {regionalPrice !== null && regionalPrice !== undefined && (
         <span style={{ fontSize: 11, color: "#4ade80" }}>
-          LK price: {formatPrice(regionalPrice)}
+          {`${regionCode}`} price: {formatPrice(regionalPrice)}
         </span>
       )}
     </div>
