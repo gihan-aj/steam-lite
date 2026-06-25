@@ -7,9 +7,9 @@ import {
 } from "../types";
 import { useGamePriceHistory } from "../hooks/useWishlist";
 import {
-  Area,
-  AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -40,37 +40,66 @@ export function GameDetailPanel({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Build Chart date from price history
-  const chartData: ChartPoint[] = (priceHistory ?? [])
-    .filter((p) => p.source === "itad_history" || p.source === "itad_steam")
-    .map((p) => {
-      const date = new Date(p.recorded_at);
-      const label = date.toLocaleDateString("en-US", {
+  // Build step-chart data from raw price history events.
+  // Each point is a discrete price-change event — we preserve exact timestamps
+  // so the X-axis reflects real time gaps between sales.
+  const chartData: ChartPoint[] = (() => {
+    const filtered = (priceHistory ?? [])
+      .filter(
+        (p) =>
+          p.source === "itad_history" ||
+          p.source === "itad_steam" ||
+          p.source === "steam_live"
+      )
+      // Sort chronologically so stepAfter draws correctly
+      .sort(
+        (a, b) =>
+          new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
+      );
+
+    if (filtered.length === 0) return [];
+
+    const points: ChartPoint[] = filtered.map((p) => {
+      const ts = new Date(p.recorded_at).getTime();
+      const label = new Date(p.recorded_at).toLocaleDateString("en-US", {
         month: "short",
+        day: "numeric",
         year: "2-digit",
       });
       const regionalPrice = game?.original_price
         ? Math.round(game.original_price * (1 - p.discount_percent / 100))
         : 0;
       return {
+        ts,
         date: label,
         cut: p.discount_percent,
         regional_price: regionalPrice,
         source: p.source,
       };
-    })
-    // Remove duplicate dates - keep highest cut for eac month
-    .reduce((acc: ChartPoint[], curr) => {
-      const existing = acc.find((p) => p.date === curr.date);
-      if (!existing) {
-        acc.push(curr);
-      } else if (curr.cut > existing.cut) {
-        existing.cut = curr.cut;
-        existing.regional_price = curr.regional_price;
-      }
-      return acc;
-    }, []);
-  console.log(chartData);
+    });
+
+    // Append a synthetic "now" point so the step extends to the right edge
+    // and shows the current discount state visually
+    const last = points[points.length - 1];
+    const nowTs = Date.now();
+    if (nowTs - last.ts > 12 * 60 * 60 * 1000) {
+      // only append if last point is older than 12 h
+      const nowLabel = new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "2-digit",
+      });
+      points.push({
+        ts: nowTs,
+        date: nowLabel,
+        cut: game?.discount_percent ?? last.cut,
+        regional_price: game?.current_price ?? last.regional_price,
+        source: "now",
+      });
+    }
+
+    return points;
+  })();
 
   const review = game ? getReviewDisplay(game) : null;
 
@@ -413,39 +442,38 @@ function PanelContent({
         {/* ── Price History Chart ───────────────────── */}
         {chartData.length > 1 && (
           <Section title={`Steam Price History (${regionCode})`}>
-            <div style={{ height: 160, marginTop: 4 }}>
+            <div style={{ height: 180, marginTop: 4 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                {/*
+                  Step chart: discounts are discrete events, not gradual changes.
+                  - X-axis uses epoch ms (numeric) so real time gaps are preserved.
+                  - type="stepAfter" draws a horizontal plateau between events,
+                    which is exactly how Steam sales look.
+                */}
+                <LineChart
                   data={chartData}
-                  margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+                  margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
                 >
-                  <defs>
-                    <linearGradient
-                      id="cutGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#3d6ef8" stopOpacity={0.3} />
-                      <stop
-                        offset="95%"
-                        stopColor="#3d6ef8"
-                        stopOpacity={0.02}
-                      />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="#1a1d28"
                     vertical={false}
                   />
                   <XAxis
-                    dataKey="date"
+                    dataKey="ts"
+                    type="number"
+                    scale="time"
+                    domain={["dataMin", "dataMax"]}
+                    tickFormatter={(ms: number) =>
+                      new Date(ms).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "2-digit",
+                      })
+                    }
                     tick={{ fontSize: 10, fill: "#5a5f72" }}
                     axisLine={false}
                     tickLine={false}
-                    interval="preserveStartEnd"
+                    tickCount={5}
                   />
                   <YAxis
                     tickFormatter={(v) => `${v}%`}
@@ -462,27 +490,32 @@ function PanelContent({
                       />
                     }
                   />
+                  {/* Horizontal baseline at 0% — helps read the "not on sale" periods */}
+                  <ReferenceLine
+                    y={0}
+                    stroke="#2a2d3a"
+                    strokeWidth={1}
+                  />
                   {/* Reference line at current discount */}
-                  {game.discount_percent && game.discount_percent > 0 && (
+                  {game.discount_percent != null && game.discount_percent > 0 && (
                     <ReferenceLine
                       y={game.discount_percent}
                       stroke="#4ade80"
                       strokeDasharray="4 2"
-                      strokeOpacity={0.6}
+                      strokeOpacity={0.5}
                       label={{
-                        value: "now",
+                        value: `now · -${game.discount_percent}%`,
                         fill: "#4ade80",
                         fontSize: 9,
-                        position: "right",
+                        position: "insideTopRight",
                       }}
                     />
                   )}
-                  <Area
-                    type="monotone"
+                  <Line
+                    type="stepAfter"
                     dataKey="cut"
                     stroke="#3d6ef8"
                     strokeWidth={2}
-                    fill="url(#cutGradient)"
                     dot={false}
                     activeDot={{
                       r: 4,
@@ -490,12 +523,13 @@ function PanelContent({
                       stroke: "#13141a",
                       strokeWidth: 2,
                     }}
+                    isAnimationActive={false}
                   />
-                </AreaChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
             <p style={{ fontSize: 10, color: "#3a3f58", marginTop: 4 }}>
-              Y-axis = Steam discount %. Hover for regional price.
+              Each step = a recorded price-change event. Hover for details.
             </p>
           </Section>
         )}
@@ -839,13 +873,22 @@ function ChartTooltip({
       }}
     >
       <span style={{ fontSize: 11, color: "#9096a8" }}>{point.date}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#3d6ef8" }}>
-        -{point.cut}% off
-      </span>
-      {regionalPrice !== null && regionalPrice !== undefined && (
-        <span style={{ fontSize: 11, color: "#4ade80" }}>
-          {`${regionCode}`} price: {formatPrice(regionalPrice)}
+      {point.cut > 0 ? (
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#3d6ef8" }}>
+          -{point.cut}% off
         </span>
+      ) : (
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#5a5f72" }}>
+          Full price
+        </span>
+      )}
+      {regionalPrice !== null && regionalPrice !== undefined && (
+        <span style={{ fontSize: 11, color: point.cut > 0 ? "#4ade80" : "#9096a8" }}>
+          {regionCode} price: {formatPrice(regionalPrice)}
+        </span>
+      )}
+      {point.source === "now" && (
+        <span style={{ fontSize: 10, color: "#3a3f58", fontStyle: "italic" }}>current</span>
       )}
     </div>
   );

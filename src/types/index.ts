@@ -77,9 +77,14 @@ export interface PricePoint {
 }
 
 export interface ChartPoint {
-  date: string; // "Jun 2026"
-  cut: number; // 65
-  regional_price: number; // 1224 (cents)
+  /** Epoch milliseconds — used as the numeric X-axis value for accurate spacing */
+  ts: number;
+  /** Human-readable label for ticks and tooltips, e.g. "Jun '26" */
+  date: string;
+  /** Discount percentage, e.g. 65 */
+  cut: number;
+  /** Regional price in cents at this event */
+  regional_price: number;
   source: string;
 }
 
