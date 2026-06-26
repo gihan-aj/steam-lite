@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{State, AppHandle, Emitter};
 use crate::{AppState};
 use crate::models::{WishlistItem};
 use crate::error::AppError;
@@ -308,7 +308,7 @@ pub async fn enrich_wishlist_prices(
             if !already_bootstrapped {
                 match state.itad.get_price_history(&itad_key, &data.itad_id, &since, &state.limits.itad).await {
                     Ok(price_history) => {
-                        if price_history.len() > 0 {
+                        if !price_history.is_empty() {
                             let mut inserted = 0u32;
 
                             for entry in &price_history {
@@ -489,22 +489,6 @@ pub async fn enrich_wishlist_prices(
 
             state.wishlist.upsert(&updated).await?;
         }
-
-        // Record current price in price_history for future trend analysis
-        if let Some(current) = data.steam_current {
-            use chrono::Utc;
-            use crate::models::PricePoint;
-
-            let point = PricePoint {
-                app_id: data.steam_app_id,
-                price: current,
-                discount_percent: data.steam_cut.unwrap_or(0),
-                recorded_at: Utc::now(),
-                source: "itad_steam".to_string(),
-            };
-            // Don't fail enrichment if price history insert fails
-            let _ = state.prices.insert(&point).await;
-        }
     }
 
     // Record that sync completed successfully
@@ -537,4 +521,36 @@ pub async fn get_game_price_history(
     app_id: i64
 ) -> Result<Vec<crate::models::PricePoint>, AppError> {
   state.prices.get_history(app_id).await
+}
+
+/// Lightweight daily sync — checks if sync is due, refreshes prices from Steam.
+/// Called on app open and every 30 minutes while app is running.
+/// Returns early if sync interval hasn't elapsed yet.
+#[tauri::command]
+pub async fn refresh_prices(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    force: bool
+) -> Result<String, AppError>{
+    use crate::services::sync_service;
+
+    if !force && !sync_service::is_sync_due(&state).await {
+        println!("[SYNC] Not due yet");
+        return Ok("not_due".to_string());
+    }
+
+    let result = sync_service::run_daily_sync(&state).await?;
+
+    let _ = app.emit("prices_refreshed", serde_json::json!({
+        "updated":  result.games_checked,
+        "changed":  result.prices_changed,
+        "added":    result.games_added,
+        "removed":  result.games_removed,
+        "source":   "manual",
+    }));
+
+    Ok(format!(
+        "synced:changed={},added={},removed={}",
+        result.prices_changed, result.games_added, result.games_removed
+    ))
 }

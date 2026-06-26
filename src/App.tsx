@@ -7,6 +7,7 @@ import { Wishlist } from "./pages/Wishlist";
 import { Deals } from "./pages/Deals";
 import { Settings } from "./pages/Settings";
 import { TitleBar } from "./components/TitleBar";
+import { useSyncListener } from "./hooks/useWishlist";
 
 // Create the TanStack Query client — one instance for the whole app
 const queryClient = new QueryClient({
@@ -22,6 +23,8 @@ const queryClient = new QueryClient({
 
 function AppShell() {
   const [currentPage, setCurrentPage] = useState<Page>("discover");
+
+  useSyncListener();
 
   const pages: Record<Page, React.ReactNode> = {
     discover: <Discover />,

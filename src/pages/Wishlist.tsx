@@ -5,7 +5,7 @@ import {
   useEnrichWishlist,
 } from "../hooks/useWishlist";
 import { useSettings } from "../hooks/useSettings";
-import { WishlistItem, formatPrice, getReviewDisplay } from "../types";
+import { WishlistItem, formatPrice, getReviewDisplay, timeAgo } from "../types";
 import { useState } from "react";
 import { GameDetailPanel } from "../components/GameDetailPanel";
 
@@ -36,9 +36,10 @@ export function Wishlist() {
           <h1 style={{ fontSize: 20, fontWeight: 600, color: "#e0e2e8" }}>
             Wishlist
           </h1>
+
           <p style={{ fontSize: 12, color: "#5a5f72", marginTop: 2 }}>
             {items?.length
-              ? `${items.length} games on your wishlist`
+              ? `${items.length} games · synced ${timeAgo(settings?.last_synced_at ?? null)}`
               : "Track prices for your wishlisted games"}
           </p>
         </div>

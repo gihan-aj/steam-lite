@@ -27,11 +27,11 @@ struct WishlistApiItems {
 
 #[derive(Debug, Deserialize)]
 pub struct WishlistApiItem {
-    appid: i64,
+    pub appid: i64,
     #[serde(default)]
     priority: i64,
     #[serde(default)]
-    date_added: i64,
+    pub date_added: i64,
 }
 
 
