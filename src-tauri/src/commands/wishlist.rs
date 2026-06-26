@@ -196,12 +196,19 @@ pub async fn enrich_wishlist_prices(
 ) -> Result<Vec<WishlistItem>, AppError> {
     let settings = state.settings.load().await?;
 
-    let itad_key = settings.itad_api_key.ok_or_else(||
+    let itad_key = settings.itad_api_key.clone().ok_or_else(||
         AppError::NotFound(
             "ITAD API key not set. Add it in Settings to see historical prices.".to_string()
         )
     )?;
-    let country = &settings.country_code.as_str();
+    let country = settings.country_code.clone();
+
+    let sync_interval = settings.sync_interval_hours;
+    let last_synced_at = settings.last_synced_at;
+    let gap_threshold = Duration::hours(sync_interval * 5 / 2);
+    let needs_gap_fill = last_synced_at
+        .map(|last| Utc::now() - last > gap_threshold)
+        .unwrap_or(false);
 
     // Load wishlist from DB
     let wishlist = state.wishlist.get_all().await?;
@@ -214,7 +221,7 @@ pub async fn enrich_wishlist_prices(
     println!("[ITAD] Enriching {} wishlist games...", app_ids.len());
 
     let price_data = state.itad
-        .enrich_games(&itad_key, &app_ids, country, &state.limits.itad)
+        .enrich_games(&itad_key, &app_ids, &country, &state.limits.itad)
         .await?;
 
     println!("[ITAD] Got price data for {} games", price_data.len());
@@ -353,15 +360,89 @@ pub async fn enrich_wishlist_prices(
                 }                     
             }
             else {
-                // Already bootstrapped — just check if current price changed
-                // and record it if so. No ITAD API call needed.
-                println!("[INFO] {} already bootstrapped, checking for price change...", updated.name);
-
-                if let Some(current_price) = data.steam_current {
-                    match state.prices.get_latest(data.steam_app_id).await {
-                        Ok(Some(last)) => {
-                            if last.discount_percent != data.steam_cut.unwrap_or(0) {
-                                // Price changed — record the new event
+                if needs_gap_fill {
+                    // App was offline for longer than our threshold.
+                    // Backfill only the missing window from ITAD — not the full 2 years.
+                    let since_str = settings.last_synced_at
+                        .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+                        .unwrap_or_else(|| {
+                            (Utc::now() - Duration::days(730))
+                                .format("%Y-%m-%dT%H:%M:%SZ")
+                                .to_string()
+                        });
+                    println!(
+                        "[INFO] {} — gap detected, backfilling from ITAD since {}",
+                        updated.name, since_str
+                    );
+                    match state.itad.get_price_history(&itad_key, &data.itad_id, &since_str, &state.limits.itad).await {
+                        Ok(price_history) if !price_history.is_empty() => {
+                            for entry in &price_history {
+                                if let Ok(ts) = entry.timestamp.parse::<DateTime<Utc>>() {
+                                    let _ = state.prices.insert(&crate::models::PricePoint {
+                                        app_id:           data.steam_app_id,
+                                        price:            entry.deal.price.amount_int,
+                                        discount_percent: entry.deal.cut,
+                                        recorded_at:      ts,
+                                        source:           "itad_history".to_string(),
+                                    }).await;
+                                }
+                            }
+                            // Re-run sale pattern on the enriched data
+                            let history = state.prices
+                                .get_history(data.steam_app_id)
+                                .await
+                                .unwrap_or_default();
+                            let sale_points: Vec<SalePoint> = history.iter()
+                                .filter(|p| p.source == "itad_history" || p.source == "steam_live")
+                                .map(|p| SalePoint { timestamp: p.recorded_at, cut: p.discount_percent })
+                                .collect();
+                            if !sale_points.is_empty() {
+                                let pattern = analyze_sale_pattern(&sale_points);
+                                updated.avg_sale_interval_days = pattern.avg_interval_days;
+                                updated.typical_discount_min   = pattern.typical_min_cut;
+                                updated.typical_discount_max   = pattern.typical_max_cut;
+                                updated.last_sale_date         = pattern.last_sale_date;
+                                updated.predicted_next_sale    = pattern.predicted_next;
+                            }
+                        }
+                        Ok(_) => {
+                            println!("[INFO] {} — gap fill: no new events from ITAD", updated.name);
+                        }
+                        Err(e) => {
+                            println!("[WARN] Failed to backfill history for {}: {}", updated.name, e);
+                        }
+                    }
+                } else {
+                    // Already bootstrapped — just check if current price changed
+                    // and record it if so. No ITAD API call needed.
+                    println!("[INFO] {} already bootstrapped, checking for price change...", updated.name);
+    
+                    if let Some(current_price) = data.steam_current {
+                        match state.prices.get_latest(data.steam_app_id).await {
+                            Ok(Some(last)) => {
+                                if last.discount_percent != data.steam_cut.unwrap_or(0) {
+                                    // Price changed — record the new event
+                                    let _ = state.prices.insert(&crate::models::PricePoint {
+                                        app_id:           data.steam_app_id,
+                                        price:            current_price,
+                                        discount_percent: data.steam_cut.unwrap_or(0),
+                                        recorded_at:      Utc::now(),
+                                        source:           "steam_live".to_string(),
+                                    }).await;
+    
+                                    println!(
+                                        "[INFO] {} — price change detected: {}% → {}%",
+                                        updated.name,
+                                        last.discount_percent,
+                                        data.steam_cut.unwrap_or(0)
+                                    );
+                                } else {
+                                    println!("[INFO] {} — price unchanged ({}%)", updated.name, last.discount_percent);
+                                }
+                            }
+                            Ok(None) => {
+                                // No records at all despite being bootstrapped?
+                                // Safety net — insert current price
                                 let _ = state.prices.insert(&crate::models::PricePoint {
                                     app_id:           data.steam_app_id,
                                     price:            current_price,
@@ -369,55 +450,35 @@ pub async fn enrich_wishlist_prices(
                                     recorded_at:      Utc::now(),
                                     source:           "steam_live".to_string(),
                                 }).await;
-
-                                println!(
-                                    "[INFO] {} — price change detected: {}% → {}%",
-                                    updated.name,
-                                    last.discount_percent,
-                                    data.steam_cut.unwrap_or(0)
-                                );
-                            } else {
-                                println!("[INFO] {} — price unchanged ({}%)", updated.name, last.discount_percent);
+                            }
+                            Err(e) => {
+                                println!("[WARN] Failed to check latest price for {}: {}", updated.name, e);
                             }
                         }
-                        Ok(None) => {
-                            // No records at all despite being bootstrapped?
-                            // Safety net — insert current price
-                            let _ = state.prices.insert(&crate::models::PricePoint {
-                                app_id:           data.steam_app_id,
-                                price:            current_price,
-                                discount_percent: data.steam_cut.unwrap_or(0),
-                                recorded_at:      Utc::now(),
-                                source:           "steam_live".to_string(),
-                            }).await;
+    
+                        // Re-run sale pattern analysis from our accumulated local data
+                        // This gets better over time as we record more real events
+                        let history = state.prices
+                            .get_history(data.steam_app_id)
+                            .await
+                            .unwrap_or_default();
+    
+                        let sale_points: Vec<SalePoint> = history.iter()
+                            .filter(|p| p.source == "itad_history" || p.source == "steam_live")
+                            .map(|p| SalePoint {
+                                timestamp: p.recorded_at,
+                                cut: p.discount_percent,
+                            })
+                            .collect();
+    
+                        if !sale_points.is_empty() {
+                            let pattern = analyze_sale_pattern(&sale_points);
+                            updated.avg_sale_interval_days = pattern.avg_interval_days;
+                            updated.typical_discount_min   = pattern.typical_min_cut;
+                            updated.typical_discount_max   = pattern.typical_max_cut;
+                            updated.last_sale_date         = pattern.last_sale_date;
+                            updated.predicted_next_sale    = pattern.predicted_next;
                         }
-                        Err(e) => {
-                            println!("[WARN] Failed to check latest price for {}: {}", updated.name, e);
-                        }
-                    }
-
-                    // Re-run sale pattern analysis from our accumulated local data
-                    // This gets better over time as we record more real events
-                    let history = state.prices
-                        .get_history(data.steam_app_id)
-                        .await
-                        .unwrap_or_default();
-
-                    let sale_points: Vec<SalePoint> = history.iter()
-                        .filter(|p| p.source == "itad_history" || p.source == "steam_live")
-                        .map(|p| SalePoint {
-                            timestamp: p.recorded_at,
-                            cut: p.discount_percent,
-                        })
-                        .collect();
-
-                    if !sale_points.is_empty() {
-                        let pattern = analyze_sale_pattern(&sale_points);
-                        updated.avg_sale_interval_days = pattern.avg_interval_days;
-                        updated.typical_discount_min   = pattern.typical_min_cut;
-                        updated.typical_discount_max   = pattern.typical_max_cut;
-                        updated.last_sale_date         = pattern.last_sale_date;
-                        updated.predicted_next_sale    = pattern.predicted_next;
                     }
                 }
 
@@ -444,6 +505,11 @@ pub async fn enrich_wishlist_prices(
             // Don't fail enrichment if price history insert fails
             let _ = state.prices.insert(&point).await;
         }
+    }
+
+    // Record that sync completed successfully
+    if let Err(e) = state.settings.set("last_synced_at", &Utc::now().to_rfc3339()).await {
+        println!("[WARN] Failed to save last_synced_at: {}", e);
     }
 
     // get the wishlist from db

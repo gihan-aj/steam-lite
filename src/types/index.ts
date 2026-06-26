@@ -103,6 +103,7 @@ export interface UserSettings {
   min_review_score: number;
   min_discount_percent: number;
   sync_interval_hours: number;
+  last_synced_at: string | null;
   alert_threshold_percent: number;
 }
 

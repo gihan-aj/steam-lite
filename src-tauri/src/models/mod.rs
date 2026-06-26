@@ -316,6 +316,9 @@ pub struct UserSettings {
  
     /// How often to sync game data in hours (default: 24)
     pub sync_interval_hours:    i64,
+
+    // When was last sync
+    pub last_synced_at:         Option<DateTime<Utc>>,
  
     /// Price drop alert threshold % (default: 50)
     pub alert_threshold_percent: i64,
@@ -338,6 +341,7 @@ impl Default for UserSettings {
             min_review_score: 90.0,
             min_discount_percent: 50,
             sync_interval_hours: 24,
+            last_synced_at: None,
             alert_threshold_percent: 50,
         }
     }
