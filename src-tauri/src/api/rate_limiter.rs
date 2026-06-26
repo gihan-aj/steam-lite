@@ -143,8 +143,7 @@ impl RateLimiter {
                 let mut guard = self.bucket.lock().await;
                 match guard.try_consume() {
                     Ok(()) => {
-                        // Got a token - proceed immediately
-                        println!("[RateLimit] {} — got token, proceeding immediately", self.name);
+                        tracing::trace!(limiter = %self.name, "Rate limiter: token acquired");
                         return;
                     }
                     Err(wait_time) => wait_time,
@@ -155,10 +154,10 @@ impl RateLimiter {
                 // or other tasks can't check the bucket
             };
 
-            println!(
-                "[RateLimit] {} — waiting {:.0}ms",
-                self.name,
-                wait.as_millis()
+            tracing::trace!(
+                limiter = %self.name,
+                wait_ms = wait.as_millis(),
+                "Rate limiter: waiting for token"
             );
 
             // Yield this task for the wait duration

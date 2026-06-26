@@ -39,6 +39,23 @@ pub struct AppState{
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 🦀 RUST LESSON: tracing subscriber
+    // tracing is Rust's structured logging framework — like Serilog in .NET.
+    // The subscriber is what actually processes log records.
+    // EnvFilter reads RUST_LOG env var: RUST_LOG=steam_lite=debug cargo run
+    // Default here: show info and above from our crate, warn from dependencies.
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "steam_lite=info,warn".into())
+        )
+        .with_target(false) //   Don't show module path
+        .with_thread_ids(false)
+        .compact()
+        .init();
+
+    tracing::info!("Steam Lite starting up");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
@@ -94,11 +111,11 @@ pub fn run() {
                     let state = bg_handle.state::<AppState>();
 
                     if !sync_service::is_sync_due(&state).await {
-                        println!("[SYNC] Background: not due");
+                        tracing::trace!("Background sync: not due yet");
                         continue;
                     }
 
-                    println!("[SYNC] Background: running daily sync");
+                    tracing::info!("Background sync: running daily sync");
 
                     match sync_service::run_daily_sync(&state).await {
                         Ok(result) => {
@@ -111,7 +128,7 @@ pub fn run() {
                             }));
                         }
                         Err(e) => {
-                            println!("[SYNC] Background sync failed: {}", e);
+                            tracing::error!(error = %e, "Background sync failed");
                         }
                     }
                 }
@@ -135,11 +152,11 @@ pub fn run() {
                     .unwrap_or(true);
 
                 if is_due {
-                    println!("[SYNC] Startup: sync is due, triggering...");
+                    tracing::info!("Startup: sync is due, triggering");
                     // Emit to React — it will call the refresh_prices command
                     let _ = startup_handle.emit("sync_due", ());
                 } else {
-                    println!("[SYNC] Startup: sync not due yet");
+                    tracing::debug!("Startup: sync not due yet");
                 }
             });
 

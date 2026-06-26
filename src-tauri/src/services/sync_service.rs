@@ -87,9 +87,11 @@ pub async fn refresh_prices(state: &AppState) -> Result<SyncResult> {
                             source:             "steam_live".to_string(),
                         }).await;
 
-                        println!(
-                            "[SYNC] {} — price changed: {:?}% → {:?}%",
-                            item.name, item.discount_percent, new_discount
+                        tracing::info!(
+                            game = %item.name,
+                            old_cut = ?item.discount_percent,
+                            new_cut = ?new_discount,
+                            "Price changed"
                         );
                         result.prices_changed += 1;
                     }
@@ -107,10 +109,10 @@ pub async fn refresh_prices(state: &AppState) -> Result<SyncResult> {
                 }
             }
             Ok(None) => {
-                println!("[SYNC] {} — no details (removed from Steam?)", item.name);
+                tracing::warn!(game = %item.name, "No app details — possibly removed from Steam");
             }
             Err(e) => {
-                println!("[SYNC] {} — error: {}", item.name, e);
+                tracing::warn!(game = %item.name, error = %e, "Price refresh error");
                 result.errors += 1;
             }
 
@@ -134,7 +136,7 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
     let steam_id = match &settings.steam_id {
         Some(id) if !id.is_empty() => id.clone(),
         _ => {
-            println!("[SYNC] No Steam ID configured — skipping wishlist sync");
+            tracing::debug!("No Steam ID configured — skipping wishlist sync");
             return Ok(result);
         }
     };
@@ -142,14 +144,14 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
     let api_key = match &settings.steam_api_key {
         Some(k) if !k.is_empty() => k.clone(),
         _ => {
-            println!("[SYNC] No Steam API key — skipping wishlist sync");
+            tracing::debug!("No Steam API key configured — skipping wishlist sync");
             return Ok(result);
         }
     };
 
     let country = settings.country_code.clone();
 
-    println!("[SYNC] Checking wishlist for changes...");
+    tracing::debug!("Checking wishlist for changes");
 
     // Fetch current wishlist IDs from Steam (just IDs, no appdetails yet)
     // This is cheap — one API call regardless of wishlist size
@@ -157,7 +159,7 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
     let steam_items = match state.steam.get_wishlist_ids(&steam_id, &api_key).await {
         Ok(items) => items,
         Err(e) => {
-            println!("[SYNC] Failed to fetch wishlist IDs: {}", e);
+            tracing::error!(error = %e, "Failed to fetch wishlist IDs from Steam");
             return Ok(result);
         }
     };
@@ -178,20 +180,17 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
 
     let removed_ids: Vec<i64> = local_ids.difference(&steam_ids).copied().collect();
 
-    println!(
-        "[SYNC] Wishlist diff: {} added, {} removed",
-        added_ids.len(), removed_ids.len()
-    );
+    tracing::info!(added = added_ids.len(), removed = removed_ids.len(), "Wishlist diff computed");
 
     // ── Handle removals ───────────────────────────────────────────
     if !removed_ids.is_empty() {
         match state.wishlist.delete_removed(&steam_ids.into_iter().collect::<Vec<_>>()).await {
             Ok(n) => {
-                println!("[SYNC] Removed {} de-wishlisted games", n);
+                tracing::info!(count = n, "Removed de-wishlisted games");
                 result.games_removed = n as u32;
             }
             Err(e) => {
-                println!("[SYNC] Failed to remove games: {}", e);
+                tracing::warn!(error = %e, "Failed to remove de-wishlisted games");
                 result.errors += 1;
             }
         }
@@ -199,7 +198,7 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
 
     // ── Handle additions ──────────────────────────────────────────
     if !added_ids.is_empty() {
-        println!("[SYNC] Fetching details for {} new games...", added_ids.len());
+        tracing::info!(count = added_ids.len(), "Fetching details for new games");
 
         // Get date_added from the Steam response for each new game
         let date_map: std::collections::HashMap<i64, i64> = steam_items
@@ -215,12 +214,12 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
             let details = match state.steam.get_app_details(app_id, &country).await {
                 Ok(Some(d)) => d,
                 Ok(None) => {
-                    println!("[SYNC] No details for new game {}", app_id);
+                    tracing::warn!(app_id = app_id, "No app details for new game");
                     result.errors += 1;
                     continue;
                 }
                 Err(e) => {
-                    println!("[SYNC] Failed details for {}: {}", app_id, e);
+                    tracing::warn!(app_id = app_id, error = %e, "Failed to fetch new game details");
                     result.errors += 1;
                     continue;
                 }
@@ -277,12 +276,12 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
 
             match state.wishlist.upsert(&new_item).await {
                 Ok(_) => {
-                    println!("[SYNC] Added new game: {}", details.name);
+                    tracing::info!(game = %details.name, "New wishlist game added");
                     result.games_added += 1;
                     result.games_checked += 1;
                 }
                 Err(e) => {
-                    println!("[SYNC] Failed to save {}: {}", details.name, e);
+                    tracing::warn!(game = %details.name, error = %e, "Failed to save new game");
                     result.errors += 1;
                 }
             }
@@ -290,10 +289,7 @@ pub async fn sync_wishlist_changes(state: &AppState) -> Result<SyncResult> {
 
         // Notify user to run Enrich for new games
         if result.games_added > 0 {
-            println!(
-                "[SYNC] {} new games added. Run ★ Enrich to fetch price history.",
-                result.games_added
-            );
+            tracing::info!(count = result.games_added, "New games added — run Enrich to fetch price history");
         }
     }
     
@@ -342,7 +338,7 @@ pub async fn fill_history_gaps(state: &AppState) -> Result<()> {
         }
     }
 
-    println!("[SYNC] Gap fill complete");
+    tracing::debug!("Gap fill complete");
     Ok(())
 }
 
@@ -353,7 +349,7 @@ pub async fn fill_history_gaps(state: &AppState) -> Result<()> {
 // ─────────────────────────────────────────────
 
 pub async fn run_daily_sync(state: &AppState) -> Result<SyncResult> {
-    println!("[SYNC] Starting daily sync...");
+    tracing::info!("Starting daily sync");
 
     // Step 1: Check for wishlist changes (added/removed games)
     // One cheap API call to get IDs, then details only for new games
@@ -361,7 +357,7 @@ pub async fn run_daily_sync(state: &AppState) -> Result<SyncResult> {
 
     // Step 2: Gap fill if needed (before price refresh)
     if needs_gap_fill(state).await {
-        println!("[SYNC] Gap detected — filling history gaps");
+        tracing::info!("Gap detected — filling history gaps");
         let _ = fill_history_gaps(state).await;
     }
 
@@ -381,10 +377,13 @@ pub async fn run_daily_sync(state: &AppState) -> Result<SyncResult> {
         errors:         price_result.errors + wishlist_result.errors,
     };
 
-    println!(
-        "[SYNC] Daily sync complete: {} checked, {} changed, {} added, {} removed, {} errors",
-        combined.games_checked, combined.prices_changed,
-        combined.games_added, combined.games_removed, combined.errors
+    tracing::info!(
+        checked = combined.games_checked,
+        changed = combined.prices_changed,
+        added   = combined.games_added,
+        removed = combined.games_removed,
+        errors  = combined.errors,
+        "Daily sync complete"
     );
 
     Ok(combined)

@@ -71,8 +71,14 @@ pub fn compute_price_signal(item: &WishlistItem) -> PriceSignal {
     let current_cut  = item.discount_percent.unwrap_or(0);
     let best_cut     = item.steam_historical_cut.unwrap_or(0);
 
-    // print for debugging with game name
-    println!("Item: {}, at_low: {}, has_history: {}, current_cut: {}, best_cut: {}", item.name, at_low, has_history, current_cut, best_cut);
+    tracing::debug!(
+        game = %item.name,
+        at_low,
+        has_history,
+        current_cut,
+        best_cut,
+        "Computing price signal"
+    );
 
     if at_low {
         return PriceSignal {

@@ -176,7 +176,7 @@ impl WishlistRepository {
             // don't wipe the entire local wishlist.
             // An empty list likely means something went wrong, not
             // that the user removed every game.
-            println!("[WARN] delete_removed called with empty list — skipping to be safe");
+            tracing::warn!("delete_removed called with empty list — skipping to avoid accidental wipe");
             return Ok(0);
         }
 

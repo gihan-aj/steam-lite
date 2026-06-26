@@ -12,24 +12,18 @@ pub async fn get_recommended_games(
     limit: i64
 ) -> Result<Vec<RecommendedGame>, AppError> {
     let count = state.games.count().await?;
-    println!("[DEBUG] get_recommended_games called — DB has {} games, min_score={}", count, min_score);
+    tracing::debug!(count, min_score, "get_recommended_games called");
 
     if count == 0 {
         // Cache is empty — fetch from SteamSpy and store
         // This happens on first run or after a database reset
-        println!("[DEBUG] Cache empty — triggering sync");
+        tracing::info!("Game cache empty — triggering sync");
         sync_games_internal(&state).await?;
     }
 
     // Fetch from local SQLite (fast, no network needed)
     let games = state.games.get_top_rated(min_score, limit).await?;
-    println!("[DEBUG] get_top_rated returned {} games", games.len());
-
-    // Print first game if any exist
-    if let Some(first) = games.first() {
-        println!("[DEBUG] First game: id={} name='{}' score={:?} is_indie={}", 
-            first.app_id, first.name, first.review_score, first.is_indie);
-    }
+    tracing::debug!(count = games.len(), "get_top_rated returned games");
 
     // Convert Game → RecommendedGame by scoring each one
     // 🦀 RUST LESSON: .iter().map().collect() — the Rust LINQ equivalent
@@ -41,7 +35,7 @@ pub async fn get_recommended_games(
         .map(|game| score_game(game))
         .collect();
 
-    println!("[DEBUG] Returning {} recommended games", recommended.len());
+    tracing::debug!(count = recommended.len(), "Returning recommended games");
     Ok(recommended)
 }
 
@@ -86,36 +80,19 @@ pub async fn get_game_details(
 async fn sync_games_internal(state: &AppState) -> Result<usize, AppError> {
     // Fetch top 100 from the last 2 weeks — fresh, relevant games
     let spy_games = state.steamspy.get_top100_in_2weeks(&state.limits.steam_store).await?;
-    println!("[DEBUG] SteamSpy returned {} games", spy_games.len());
-
-    // Print what the first game looks like raw
-    if let Some(first) = spy_games.first() {
-        println!("[DEBUG] First raw game: id={} name='{}' positive={} negative={} is_indie={}", 
-            first.appid, first.name, first.positive, first.negative, first.is_indie());
-    } else {
-        println!("[DEBUG] No games returned from SteamSpy");
-    }
+    tracing::info!(count = spy_games.len(), "SteamSpy sync: games fetched");
 
     // Convert all SteamSpy responses to our Game model
-    // 🦀 RUST LESSON: .iter().map().collect() builds a new Vec
     let games: Vec<Game> = spy_games
         .iter()
-        .map(steamspy_to_game)   // function pointer — same as .map(|g| steamspy_to_game(g))
+        .map(steamspy_to_game)
         .collect();
-
-    println!("[DEBUG] Converted {} games", games.len());
-    // Print review scores to see what we're storing
-    let scores: Vec<f64> = games.iter()
-        .filter_map(|g| g.review_score)
-        .take(5)
-        .collect();
-    println!("[DEBUG] First 5 review scores: {:?}", scores);
 
     let count = games.len();
 
     // Bulk upsert in a single transaction (fast!)
     state.games.upsert_many(&games).await?;
-    println!("[DEBUG] Upserted {} games to DB", count);
+    tracing::info!(count, "SteamSpy sync: games upserted to DB");
 
     Ok(count)
 }

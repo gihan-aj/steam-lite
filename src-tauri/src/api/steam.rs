@@ -177,7 +177,7 @@ impl SteamClient{
         // Sort by priority (user's wishlist order)
         items.sort_by_key(|i| i.priority);
 
-        println!("[INFO] Wishlist has {} items, fetching details...", items.len());
+        tracing::info!(count = items.len(), "Fetching wishlist game details");
 
         let mut result = Vec::new();
 
@@ -195,16 +195,16 @@ impl SteamClient{
                 }
                 Ok(None) => {
                     // Game may have been removed from Steam
-                    println!("[WARN] No details for app_id {}", item.appid);
+                    tracing::warn!(app_id = item.appid, "No app details — possibly removed from Steam");
                 }
                 Err(e) => {
                     // Don't fail the whole wishlist if one game fails
-                    println!("[WARN] Failed to get details for {}: {}", item.appid, e);
+                    tracing::warn!(app_id = item.appid, error = %e, "Failed to fetch app details");
                 }
             }
         }
 
-        println!("[INFO] Got details for {}/{} wishlist games", result.len(), items.len());
+        tracing::info!(fetched = result.len(), total = items.len(), "Wishlist details fetched");
         Ok(result)
     }
 

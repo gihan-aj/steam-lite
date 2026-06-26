@@ -35,7 +35,7 @@ pub async fn fetch_wishlist(
 
     let country_code = &settings.country_code.as_str();
 
-    println!("[INFO] Fetching wishlist for Steam ID: {}", steam_id);
+    tracing::info!(steam_id = %steam_id, "Fetching wishlist from Steam");
 
     // Fetch from Steam
     let raw_items = state.steam
@@ -129,9 +129,9 @@ pub async fn fetch_wishlist(
     }
 
     match state.wishlist.delete_removed(&fetched_ids).await {
-        Ok(0)       => println!("[INFO] Wishlist sync: no removed games"),
-        Ok(removed) => println!("[INFO] Wishlist sync: removed {} games no longer wishlisted", removed),
-        Err(e)      => println!("[WARN] Failed to clean up removed wishlist games: {}", e),
+        Ok(0)       => tracing::debug!("Wishlist sync: no removed games"),
+        Ok(removed) => tracing::info!(count = removed, "Wishlist sync: removed games no longer wishlisted"),
+        Err(e)      => tracing::warn!(error = %e, "Failed to clean up removed wishlist games"),
         // Don't fail the whole sync for a cleanup error
     }
 
@@ -151,7 +151,7 @@ pub async fn fetch_wishlist(
     // For now we return the basic items immediately and enrichment
     // happens on the next fetch. This keeps the UI responsive.
 
-    println!("[INFO] Wishlist saved to DB, returning {} items", wishlist_items.len());
+    tracing::info!(count = wishlist_items.len(), "Wishlist saved to DB");
     Ok(wishlist_items)
 }
 
@@ -218,13 +218,13 @@ pub async fn enrich_wishlist_prices(
 
     let app_ids: Vec<i64> = wishlist.iter().map(|w| w.app_id).collect();
 
-    println!("[ITAD] Enriching {} wishlist games...", app_ids.len());
+    tracing::info!(count = app_ids.len(), "Enriching wishlist games via ITAD");
 
     let price_data = state.itad
         .enrich_games(&itad_key, &app_ids, &country, &state.limits.itad)
         .await?;
 
-    println!("[ITAD] Got price data for {} games", price_data.len());
+    tracing::info!(count = price_data.len(), "ITAD: price data received");
 
     // use std::collections::HashMap;
     // let itad_id_map : HashMap<i64, String> = price_data.iter()
@@ -300,7 +300,7 @@ pub async fn enrich_wishlist_prices(
                     }
                 }
                 Err(e) => {
-                    println!("[WARN] Failed to get info for {}: {}", updated.name, e);
+                    tracing::warn!(game = %updated.name, error = %e, "Failed to fetch game info from ITAD");
                 }
             }
             
@@ -346,16 +346,18 @@ pub async fn enrich_wishlist_prices(
                             if inserted > 0 {
                                 updated.itad_history_bootstrapped = true;
                             }
-    
-                            println!(
-                                "[ITAD] {} — {} sales, avg interval: {:?} days, next: {:?}",
-                                updated.name, pattern.sale_count,
-                                pattern.avg_interval_days, updated.predicted_next_sale
+
+                            tracing::info!(
+                                game         = %updated.name,
+                                sale_count   = pattern.sale_count,
+                                avg_interval = ?pattern.avg_interval_days,
+                                next_sale    = ?updated.predicted_next_sale,
+                                "ITAD history bootstrapped"
                             );
                         }
                     }
                     Err(e) => {
-                        println!("[WARN] Failed to get history for {}: {}", updated.name, e);
+                        tracing::warn!(game = %updated.name, error = %e, "Failed to fetch price history from ITAD");
                     }
                 }                     
             }
@@ -370,10 +372,7 @@ pub async fn enrich_wishlist_prices(
                                 .format("%Y-%m-%dT%H:%M:%SZ")
                                 .to_string()
                         });
-                    println!(
-                        "[INFO] {} — gap detected, backfilling from ITAD since {}",
-                        updated.name, since_str
-                    );
+                    tracing::info!(game = %updated.name, since = %since_str, "Gap detected, backfilling from ITAD");
                     match state.itad.get_price_history(&itad_key, &data.itad_id, &since_str, &state.limits.itad).await {
                         Ok(price_history) if !price_history.is_empty() => {
                             for entry in &price_history {
@@ -406,16 +405,16 @@ pub async fn enrich_wishlist_prices(
                             }
                         }
                         Ok(_) => {
-                            println!("[INFO] {} — gap fill: no new events from ITAD", updated.name);
+                            tracing::debug!(game = %updated.name, "Gap fill: no new events from ITAD");
                         }
                         Err(e) => {
-                            println!("[WARN] Failed to backfill history for {}: {}", updated.name, e);
+                            tracing::warn!(game = %updated.name, error = %e, "Failed to backfill price history");
                         }
                     }
                 } else {
                     // Already bootstrapped — just check if current price changed
                     // and record it if so. No ITAD API call needed.
-                    println!("[INFO] {} already bootstrapped, checking for price change...", updated.name);
+                    tracing::debug!(game = %updated.name, "Already bootstrapped, checking for price change");
     
                     if let Some(current_price) = data.steam_current {
                         match state.prices.get_latest(data.steam_app_id).await {
@@ -429,15 +428,15 @@ pub async fn enrich_wishlist_prices(
                                         recorded_at:      Utc::now(),
                                         source:           "steam_live".to_string(),
                                     }).await;
-    
-                                    println!(
-                                        "[INFO] {} — price change detected: {}% → {}%",
-                                        updated.name,
-                                        last.discount_percent,
-                                        data.steam_cut.unwrap_or(0)
+
+                                    tracing::info!(
+                                        game    = %updated.name,
+                                        old_cut = last.discount_percent,
+                                        new_cut = data.steam_cut.unwrap_or(0),
+                                        "Price change detected"
                                     );
                                 } else {
-                                    println!("[INFO] {} — price unchanged ({}%)", updated.name, last.discount_percent);
+                                    tracing::debug!(game = %updated.name, cut = last.discount_percent, "Price unchanged");
                                 }
                             }
                             Ok(None) => {
@@ -452,7 +451,7 @@ pub async fn enrich_wishlist_prices(
                                 }).await;
                             }
                             Err(e) => {
-                                println!("[WARN] Failed to check latest price for {}: {}", updated.name, e);
+                                tracing::warn!(game = %updated.name, error = %e, "Failed to check latest price");
                             }
                         }
     
@@ -493,7 +492,7 @@ pub async fn enrich_wishlist_prices(
 
     // Record that sync completed successfully
     if let Err(e) = state.settings.set("last_synced_at", &Utc::now().to_rfc3339()).await {
-        println!("[WARN] Failed to save last_synced_at: {}", e);
+        tracing::warn!(error = %e, "Failed to save last_synced_at");
     }
 
     // get the wishlist from db
@@ -535,7 +534,7 @@ pub async fn refresh_prices(
     use crate::services::sync_service;
 
     if !force && !sync_service::is_sync_due(&state).await {
-        println!("[SYNC] Not due yet");
+        tracing::debug!("refresh_prices: not due yet");
         return Ok("not_due".to_string());
     }
 

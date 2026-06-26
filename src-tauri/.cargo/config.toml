@@ -1,0 +1,13 @@
+[env]
+# Tracing filter for `npm run tauri dev`.
+# Controls what the Rust backend logs to the terminal.
+#
+# Format: crate=level,crate2=level
+# Levels: error < warn < info < debug < trace
+#
+# Examples:
+#   RUST_LOG = "steam_lite=debug"          — our code at debug, deps quiet
+#   RUST_LOG = "steam_lite=trace"          — everything including rate-limiter tokens
+#   RUST_LOG = "steam_lite=info"           — only price changes + sync milestones
+#   RUST_LOG = "steam_lite=debug,sqlx=warn" — debug our code, silence sqlx query logs
+RUST_LOG = "steam_lite=debug"

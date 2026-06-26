@@ -313,7 +313,7 @@ impl ItadClient  {
             return Ok(vec![]);
         }
 
-        println!("[ITAD] Looking up {} games...", steam_app_ids.len());
+        tracing::debug!(count = steam_app_ids.len(), "ITAD: resolving Steam app IDs");
 
         // Step 1: Resolve each Steam app_id to an ITAD UUID
         // We do these sequentially to respect rate limits
@@ -325,11 +325,11 @@ impl ItadClient  {
                     id_pairs.push((app_id, itad_id));
                 }
                 Ok(None) => {
-                    println!("[ITAD] Game {} not found in ITAD", app_id);
+                    tracing::warn!(app_id, "Game not found in ITAD");
                 }
                 Err(e) => {
                     // Don't fail the whole batch if one lookup fails
-                    println!("[ITAD] Lookup failed for {}: {}", app_id, e);
+                    tracing::warn!(app_id, error = %e, "ITAD lookup failed");
                 }
             }
         }
@@ -338,7 +338,7 @@ impl ItadClient  {
             return Ok(vec![]);
         }
 
-        println!("[ITAD] Found {} games, fetching price data...", id_pairs.len());
+        tracing::info!(count = id_pairs.len(), "ITAD: IDs resolved, fetching price data");
 
         // Collect just the ITAD UUIDs for the batch calls
         let itad_ids: Vec<String> = id_pairs.iter().map(|(_, id)| id.clone()).collect();
