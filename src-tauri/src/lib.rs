@@ -20,6 +20,7 @@ use db::{
     settings_repository::SettingsRepository,
     crawl_repository::CrawlRepository,
 };
+use tokio::sync::watch;
 
 use crate::api::itad::ItadClient;
 use crate::api::steamspy::SteamSpyClient;
@@ -37,6 +38,7 @@ pub struct AppState{
     pub steam: SteamClient,
     pub itad: ItadClient,
     pub limits:   ApiRateLimiters,
+    pub crawl_stop_tx: watch::Sender<bool>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -78,6 +80,8 @@ pub fn run() {
                     .expect("Failed to initialise database")
             });
 
+            let (crawl_stop_tx, _crawl_stop_rx) = watch::channel(false);
+
             // Register the pool in Tauri's state container
             let state = AppState {
                 games:    GameRepository::new(db_pool.clone()),
@@ -89,6 +93,7 @@ pub fn run() {
                 steam:    SteamClient::new(), 
                 itad:     ItadClient::new(),
                 limits:   ApiRateLimiters::new(),
+                crawl_stop_tx,
                 db:       db_pool,
             };
             app.manage(state);

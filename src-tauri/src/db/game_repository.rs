@@ -35,7 +35,14 @@ impl GameRepository {
                     price_original,
                     platform_windows as "platform_windows: bool",
                     tags,
-                    last_updated as "last_updated: chrono::DateTime<chrono::Utc>"
+                    last_updated as "last_updated: chrono::DateTime<chrono::Utc>",
+                    gem_score, 
+                    owners_lower, 
+                    avg_playtime,
+                    crawl_source, 
+                    header_image, 
+                    short_desc, 
+                    genres
                 FROM games
                 WHERE review_score >= ?
                 AND is_indie = 0
@@ -59,6 +66,43 @@ impl GameRepository {
         Ok(rows.into_iter().map(|row| row.into()).collect())
     }
 
+    /// Fetch top hidden gems — games with highest gem_score.
+    pub async fn get_hidden_gems(&self, limit: i64) -> Result<Vec<Game>> {
+        let rows = sqlx::query_as!(
+            GameRow,
+            r#"
+            SELECT
+                app_id, 
+                name, 
+                review_score, 
+                total_reviews,
+                is_indie as "is_indie: bool", 
+                price_current, 
+                price_original,
+                platform_windows as "platform_windows: bool", 
+                tags, 
+                last_updated as "last_updated: chrono::DateTime<chrono::Utc>",
+                gem_score, 
+                owners_lower, 
+                avg_playtime,
+                crawl_source, 
+                header_image, 
+                short_desc, 
+                genres
+            FROM games
+            WHERE gem_score IS NOT NULL
+            AND gem_score > 0
+            ORDER BY gem_score DESC
+            LIMIT ?
+            "#,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+
     pub async fn get_by_id(&self, app_id: i64) -> Result<Option<Game>> {
         let row = sqlx::query_as!(
             GameRow,
@@ -73,7 +117,14 @@ impl GameRepository {
                 price_original,
                 platform_windows as "platform_windows: bool",
                 tags,
-                last_updated as "last_updated: chrono::DateTime<chrono::Utc>"
+                last_updated as "last_updated: chrono::DateTime<chrono::Utc>",
+                gem_score, 
+                owners_lower, 
+                avg_playtime,
+                crawl_source, 
+                header_image, 
+                short_desc, 
+                genres
             FROM games
             WHERE app_id = ?
             "#,
@@ -98,8 +149,10 @@ impl GameRepository {
             INSERT OR REPLACE INTO games (
                 app_id, name, review_score, total_reviews,
                 is_indie, price_current, price_original,
-                platform_windows, tags, last_updated
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                platform_windows, tags, last_updated,
+                gem_score, owners_lower, avg_playtime,
+                crawl_source, header_image, short_desc, genres
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             game.app_id,
             game.name,
@@ -110,7 +163,14 @@ impl GameRepository {
             game.price_original,
             platform_windows,
             game.tags,
-            game.last_updated
+            game.last_updated,
+            game.gem_score,
+            game.owners_lower,
+            game.avg_playtime,
+            game.crawl_source,
+            game.header_image,
+            game.short_desc,
+            game.genres,
         )
         .execute(&self.pool)
         .await?;
@@ -130,8 +190,10 @@ impl GameRepository {
                 INSERT OR REPLACE INTO games (
                     app_id, name, review_score, total_reviews,
                     is_indie, price_current, price_original,
-                    platform_windows, tags, last_updated
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    platform_windows, tags, last_updated,
+                    gem_score, owners_lower, avg_playtime,
+                    crawl_source, header_image, short_desc, genres
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 "#,
                 game.app_id,
                 game.name,
@@ -142,7 +204,14 @@ impl GameRepository {
                 game.price_original,
                 platform_windows,
                 game.tags,
-                game.last_updated
+                game.last_updated,
+                game.gem_score,
+                game.owners_lower,
+                game.avg_playtime,
+                game.crawl_source,
+                game.header_image,
+                game.short_desc,
+                game.genres,
             )
             .execute(&mut *tx)
             .await?;

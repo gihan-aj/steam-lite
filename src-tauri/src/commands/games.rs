@@ -124,6 +124,13 @@ fn steamspy_to_game(spy: &crate::api::steamspy::SteamSpyGame) -> Game {
         platform_windows: true, // SteamSpy top100 is PC-only
         tags:             tags_string,
         last_updated:     Some(Utc::now()),
+        gem_score:       None,
+        owners_lower:    None,
+        avg_playtime:    None,
+        crawl_source:    None,
+        header_image:    None,
+        short_desc:      None,
+        genres:          None,
     }
 }
 

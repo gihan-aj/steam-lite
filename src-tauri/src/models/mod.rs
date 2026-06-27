@@ -15,6 +15,13 @@ pub struct GameRow {
     pub platform_windows: i64,           // BOOLEAN stored as 0/1
     pub tags:             Option<String>,
     pub last_updated:     Option<DateTime<Utc>>,
+    pub gem_score:        Option<f64>,
+    pub owners_lower:     Option<i64>,
+    pub avg_playtime:     Option<i64>,
+    pub crawl_source:     Option<String>,
+    pub header_image:     Option<String>,
+    pub short_desc:       Option<String>,
+    pub genres:           Option<String>,
 }
 
 /// Raw database row for the `wishlist` table.
@@ -72,33 +79,22 @@ pub struct PriceRow {
 pub struct Game {
     /// Steam App ID — unique identifier for every game on Steam
     pub app_id:             i64,
- 
     pub name:               String,
- 
-    /// Positive review percentage (0.0 - 100.0).
-    /// Option because SteamSpy may not have data for very new games.
     pub review_score:       Option<f64>,
- 
     pub total_reviews:      Option<i64>,
- 
-    /// Whether this game is tagged as indie by SteamSpy
     pub is_indie:           bool,
- 
-    /// Current price in USD (cents, to avoid floating point issues)
-    /// e.g. 999 = $9.99
     pub price_current:      Option<i64>,
- 
     pub price_original:     Option<i64>,
- 
-    /// Whether the game runs on Windows
     pub platform_windows:   bool,
- 
-    /// JSON-encoded list of genre/category tags
-    /// e.g. ["Indie", "RPG", "Singleplayer"]
     pub tags:               Option<String>,
- 
-    /// When we last fetched data for this game from the API
     pub last_updated:       Option<DateTime<Utc>>,
+    pub gem_score:          Option<f64>,
+    pub owners_lower:       Option<i64>,
+    pub avg_playtime:       Option<i64>,
+    pub crawl_source:       Option<String>,
+    pub header_image:       Option<String>,
+    pub short_desc:         Option<String>,
+    pub genres:             Option<String>,
 }
 
 impl From<GameRow> for Game {
@@ -114,6 +110,13 @@ impl From<GameRow> for Game {
             platform_windows: row.platform_windows != 0,
             tags:             row.tags,
             last_updated:     row.last_updated,
+            gem_score:        row.gem_score,
+            owners_lower:     row.owners_lower,
+            avg_playtime:     row.avg_playtime,
+            crawl_source:     row.crawl_source,
+            header_image:     row.header_image,
+            short_desc:       row.short_desc,
+            genres:           row.genres
         }
     }
 }
