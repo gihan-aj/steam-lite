@@ -8,6 +8,7 @@ import { Deals } from "./pages/Deals";
 import { Settings } from "./pages/Settings";
 import { TitleBar } from "./components/TitleBar";
 import { useSyncListener } from "./hooks/useWishlist";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Create the TanStack Query client — one instance for the whole app
 const queryClient = new QueryClient({
@@ -27,10 +28,26 @@ function AppShell() {
   useSyncListener();
 
   const pages: Record<Page, React.ReactNode> = {
-    discover: <Discover />,
-    wishlist: <Wishlist />,
-    deals: <Deals />,
-    settings: <Settings />,
+    discover: (
+      <ErrorBoundary>
+        <Discover />
+      </ErrorBoundary>
+    ),
+    wishlist: (
+      <ErrorBoundary>
+        <Wishlist />
+      </ErrorBoundary>
+    ),
+    deals: (
+      <ErrorBoundary>
+        <Deals />
+      </ErrorBoundary>
+    ),
+    settings: (
+      <ErrorBoundary>
+        <Settings />
+      </ErrorBoundary>
+    ),
   };
 
   return (

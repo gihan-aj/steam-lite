@@ -29,7 +29,9 @@ export function GameDetailPanel({
   regionCode = "LK",
 }: GameDetailPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const { data: priceHistory } = useGamePriceHistory(game?.app_id ?? null);
+  const { data: priceHistory, isLoading: historyLoading } = useGamePriceHistory(
+    game?.app_id ?? null,
+  );
 
   // Close on Escape Key
   useEffect(() => {
@@ -49,12 +51,12 @@ export function GameDetailPanel({
         (p) =>
           p.source === "itad_history" ||
           p.source === "itad_steam" ||
-          p.source === "steam_live"
+          p.source === "steam_live",
       )
       // Sort chronologically so stepAfter draws correctly
       .sort(
         (a, b) =>
-          new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
+          new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime(),
       );
 
     if (filtered.length === 0) return [];
@@ -152,6 +154,7 @@ export function GameDetailPanel({
         {game && (
           <PanelContent
             game={game}
+            historyLoading={historyLoading}
             chartData={chartData}
             review={review}
             onClose={onClose}
@@ -167,6 +170,7 @@ export function GameDetailPanel({
 // ── Panel content — separated so it only renders when game is set ──
 function PanelContent({
   game,
+  historyLoading,
   chartData,
   review,
   onClose,
@@ -174,6 +178,7 @@ function PanelContent({
   regionCode = "LK",
 }: {
   game: WishlistItem;
+  historyLoading: boolean;
   chartData: ChartPoint[];
   review: { label: string; color: string } | null;
   onClose: () => void;
@@ -440,7 +445,18 @@ function PanelContent({
         </Section>
 
         {/* ── Price History Chart ───────────────────── */}
-        {chartData.length > 1 && (
+        {historyLoading ? (
+          <div
+            style={{
+              height: 160,
+              background:
+                "linear-gradient(90deg, #1a1d28 25%, #242736 50%, #1a1d28 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.5s infinite",
+              borderRadius: 6,
+            }}
+          />
+        ) : chartData.length > 1 ? (
           <Section title={`Steam Price History (${regionCode})`}>
             <div style={{ height: 180, marginTop: 4 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -491,26 +507,23 @@ function PanelContent({
                     }
                   />
                   {/* Horizontal baseline at 0% — helps read the "not on sale" periods */}
-                  <ReferenceLine
-                    y={0}
-                    stroke="#2a2d3a"
-                    strokeWidth={1}
-                  />
+                  <ReferenceLine y={0} stroke="#2a2d3a" strokeWidth={1} />
                   {/* Reference line at current discount */}
-                  {game.discount_percent != null && game.discount_percent > 0 && (
-                    <ReferenceLine
-                      y={game.discount_percent}
-                      stroke="#4ade80"
-                      strokeDasharray="4 2"
-                      strokeOpacity={0.5}
-                      label={{
-                        value: `now · -${game.discount_percent}%`,
-                        fill: "#4ade80",
-                        fontSize: 9,
-                        position: "insideTopRight",
-                      }}
-                    />
-                  )}
+                  {game.discount_percent != null &&
+                    game.discount_percent > 0 && (
+                      <ReferenceLine
+                        y={game.discount_percent}
+                        stroke="#4ade80"
+                        strokeDasharray="4 2"
+                        strokeOpacity={0.5}
+                        label={{
+                          value: `now · -${game.discount_percent}%`,
+                          fill: "#4ade80",
+                          fontSize: 9,
+                          position: "insideTopRight",
+                        }}
+                      />
+                    )}
                   <Line
                     type="stepAfter"
                     dataKey="cut"
@@ -532,9 +545,7 @@ function PanelContent({
               Each step = a recorded price-change event. Hover for details.
             </p>
           </Section>
-        )}
-
-        {chartData.length <= 1 && (
+        ) : (
           <Section title={`Steam Price History (${regionCode})`}>
             <p style={{ fontSize: 12, color: "#5a5f72", padding: "12px 0" }}>
               {chartData.length === 0

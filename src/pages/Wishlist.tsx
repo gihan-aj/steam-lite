@@ -5,9 +5,16 @@ import {
   useEnrichWishlist,
 } from "../hooks/useWishlist";
 import { useSettings } from "../hooks/useSettings";
-import { WishlistItem, formatPrice, getReviewDisplay, timeAgo } from "../types";
+import {
+  UserSettings,
+  WishlistItem,
+  formatPrice,
+  getReviewDisplay,
+  timeAgo,
+} from "../types";
 import { useState } from "react";
 import { GameDetailPanel } from "../components/GameDetailPanel";
+import { SkeletonGrid } from "../components/SkeletonCard";
 
 export function Wishlist() {
   const { data: settings } = useSettings();
@@ -21,6 +28,8 @@ export function Wishlist() {
 
   const newGamesNeedingEnrich =
     items?.filter((i) => !i.itad_history_bootstrapped && !i.itad_id) ?? [];
+
+  const hasRequiredKeys = !!settings?.steam_id && !!settings?.steam_api_key;
 
   return (
     <div className="flex flex-col h-full" style={{ position: "relative" }}>
@@ -95,21 +104,43 @@ export function Wishlist() {
       </div>
 
       {/* No Steam ID state */}
-      {!hasSteamId && (
+      {!hasRequiredKeys && !isLoading && (!items || items.length === 0) && (
         <div
           style={{
-            margin: 20,
-            padding: "16px 20px",
-            background: "#1a1d28",
-            border: "1px solid #2a2d3a",
-            borderRadius: 10,
-            fontSize: 13,
-            color: "#9096a8",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: 1,
+            gap: 16,
+            padding: 40,
           }}
         >
-          Add your Steam ID in{" "}
-          <strong style={{ color: "#e0e2e8" }}>Settings</strong> to sync your
-          wishlist. Your profile must be set to public.
+          <span style={{ fontSize: 48, opacity: 0.4 }}>🔑</span>
+          <div style={{ textAlign: "center" }}>
+            <h2
+              style={{
+                fontSize: 16,
+                color: "#e0e2e8",
+                fontWeight: 500,
+                margin: "0 0 8px",
+              }}
+            >
+              Setup required
+            </h2>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#5a5f72",
+                maxWidth: 280,
+                lineHeight: 1.6,
+              }}
+            >
+              Add your Steam ID and Steam API key in Settings to start tracking
+              your wishlist.
+            </p>
+          </div>
+          <SetupChecklist settings={settings} />
         </div>
       )}
 
@@ -132,11 +163,7 @@ export function Wishlist() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto" style={{ padding: "12px 20px" }}>
-        {isLoading && (
-          <div className="flex items-center justify-center h-40">
-            <span style={{ color: "#5a5f72", fontSize: 13 }}>Loading…</span>
-          </div>
-        )}
+        {isLoading && <SkeletonGrid count={6} />}
 
         {!isLoading && (!items || items.length === 0) && hasSteamId && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -676,6 +703,71 @@ function PriceRow({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function SetupChecklist({ settings }: { settings: UserSettings | undefined }) {
+  const steps = [
+    { label: "Steam ID", done: !!settings?.steam_id },
+    { label: "Steam API key", done: !!settings?.steam_api_key },
+    { label: "ITAD API key", done: !!settings?.itad_api_key, optional: true },
+    { label: "Region", done: !!settings?.country_code },
+  ];
+
+  return (
+    <div
+      style={{
+        background: "#1c1e27",
+        border: "1px solid #242736",
+        borderRadius: 10,
+        padding: "4px 0",
+        minWidth: 240,
+      }}
+    >
+      {steps.map((step) => (
+        <div
+          key={step.label}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "9px 16px",
+            borderBottom: "1px solid #1a1d28",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              color: step.done ? "#4ade80" : "#3a3f58",
+            }}
+          >
+            {step.done ? "✓" : "○"}
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              color: step.done ? "#e0e2e8" : "#5a5f72",
+            }}
+          >
+            {step.label}
+          </span>
+          {step.optional && (
+            <span
+              style={{ fontSize: 10, color: "#3a3f58", marginLeft: "auto" }}
+            >
+              optional
+            </span>
+          )}
+          {!step.done && !step.optional && (
+            <span
+              style={{ fontSize: 10, color: "#3d6ef8", marginLeft: "auto" }}
+            >
+              required
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
