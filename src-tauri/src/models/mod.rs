@@ -366,3 +366,49 @@ impl Default for UserSettings {
 //     }
 //     (((original - current) as f64 / original as f64) * 100.0) as i64
 // }
+
+/// Tracks the progress of the background catalogue crawl.
+/// Stored in the crawl_state table as key-value pairs.
+/// Lets us resume after interruption, crash, or app close.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CrawlState {
+    /// Which SteamSpy /all page to fetch next (0-indexed)
+    pub current_page:    u32,
+
+    /// Estimated total pages (SteamSpy has ~50)
+    pub total_pages:     u32,
+
+    /// Current status of the crawl
+    pub status:          CrawlStatus,
+
+    /// When the last page was successfully fetched
+    pub last_page_at:    Option<String>,
+
+    /// Total games stored in the games table so far
+    pub games_indexed:   u32,
+
+    /// Games that passed our hidden gem score threshold
+    pub games_qualified: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum CrawlStatus {
+    #[default]
+    Idle,       // never started
+    Running,    // actively fetching pages
+    Paused,     // interrupted (app closed mid-crawl)
+    Complete,   // all pages fetched
+}
+
+// Display for logging
+impl std::fmt::Display for CrawlStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            CrawlStatus::Idle     => write!(f, "idle"),
+            CrawlStatus::Running  => write!(f, "running"),
+            CrawlStatus::Paused   => write!(f, "paused"),
+            CrawlStatus::Complete => write!(f, "complete"),
+        }
+    }
+}

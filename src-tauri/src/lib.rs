@@ -18,6 +18,7 @@ use db::{
     price_repository::PriceRepository,
     wishlist_repository::WishlistRepository,
     settings_repository::SettingsRepository,
+    crawl_repository::CrawlRepository,
 };
 
 use crate::api::itad::ItadClient;
@@ -31,6 +32,7 @@ pub struct AppState{
     pub prices: PriceRepository,
     pub wishlist: WishlistRepository,
     pub settings: SettingsRepository,
+    pub crawl: CrawlRepository,
     pub steamspy: SteamSpyClient,
     pub steam: SteamClient,
     pub itad: ItadClient,
@@ -82,6 +84,7 @@ pub fn run() {
                 prices:   PriceRepository::new(db_pool.clone()),
                 wishlist: WishlistRepository::new(db_pool.clone()),
                 settings: SettingsRepository::new(db_pool.clone()),
+                crawl: CrawlRepository::new(db_pool.clone()),
                 steamspy: SteamSpyClient::new(),
                 steam:    SteamClient::new(), 
                 itad:     ItadClient::new(),
@@ -175,6 +178,8 @@ pub fn run() {
             commands::wishlist::enrich_wishlist_prices,
             commands::wishlist::get_game_price_history,
             commands::wishlist::refresh_prices,
+            commands::discover::get_crawl_state,
+            commands::discover::reset_crawl,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

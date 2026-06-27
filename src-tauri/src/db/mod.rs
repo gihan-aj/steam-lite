@@ -2,6 +2,7 @@
 pub mod price_repository;
 pub mod wishlist_repository;
 pub mod settings_repository;
+pub mod crawl_repository;
 
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use crate::error::Result;
