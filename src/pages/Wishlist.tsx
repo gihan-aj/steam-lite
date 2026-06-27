@@ -19,6 +19,9 @@ export function Wishlist() {
 
   const hasSteamId = !!settings?.steam_id;
 
+  const newGamesNeedingEnrich =
+    items?.filter((i) => !i.itad_history_bootstrapped && !i.itad_id) ?? [];
+
   return (
     <div className="flex flex-col h-full" style={{ position: "relative" }}>
       {/* Header */}
@@ -141,6 +144,59 @@ export function Wishlist() {
             <p style={{ color: "#5a5f72", fontSize: 13 }}>
               No wishlist data yet — click Sync to fetch from Steam
             </p>
+          </div>
+        )}
+
+        {newGamesNeedingEnrich.length > 0 && (
+          <div
+            style={{
+              margin: "0 0 12px",
+              padding: "10px 14px",
+              background: "#1a2235",
+              border: "1px solid #1e3a6a",
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14 }}>✦</span>
+              <div>
+                <span
+                  style={{ fontSize: 13, color: "#60a5fa", fontWeight: 500 }}
+                >
+                  {newGamesNeedingEnrich.length === 1
+                    ? "1 new game needs enrichment"
+                    : `${newGamesNeedingEnrich.length} new games need enrichment`}
+                </span>
+                <p
+                  style={{ fontSize: 11, color: "#3d6ef8", margin: "2px 0 0" }}
+                >
+                  Click ★ Enrich to fetch price history and review scores
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => enrich.mutate()}
+              disabled={enrich.isPending}
+              style={{
+                background: "#1d4ed8",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                padding: "6px 14px",
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: enrich.isPending ? "not-allowed" : "pointer",
+                flexShrink: 0,
+                opacity: enrich.isPending ? 0.7 : 1,
+              }}
+            >
+              {enrich.isPending ? "Enriching…" : "★ Enrich now"}
+            </button>
           </div>
         )}
 

@@ -60,6 +60,7 @@ export interface WishlistItem {
   typical_discount_max: number | null;
   last_sale_date: string | null;
   predicted_next_sale: string | null;
+  itad_history_bootstrapped: boolean;
 }
 
 export interface PriceSignal {
