@@ -1,179 +1,409 @@
 import { useState } from "react";
-import { useRecommendedGames, useSyncGames } from "../hooks/useRecommendedGames";
-import { GameCard } from "../components/GameCard";
+import {
+  useCrawlProgress,
+  useCrawlState,
+  useHiddenGems,
+  useResetCrawl,
+  useStartCrawl,
+  useStopCrawl,
+} from "../hooks/useDiscover";
+import { DiscoverGameCard } from "../components/DiscoverGameCard";
+import { SkeletonGrid } from "../components/SkeletonCard";
 
 export function Discover() {
-    const [minScore, setMinScore] = useState(85);
-    const {
-      data: games,
-      isLoading,
-      isError,
-      error,
-    } = useRecommendedGames(minScore);
-    const sync = useSyncGames();
+  const [minScore, setMinScore] = useState(85);
 
-    return (
-      <div className="flex flex-col h-full">
-        {/* Page header */}
-        <div
-          className="flex items-center justify-between px-5 py-4 shrink-0"
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid #1a1d28",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexShrink: 0,
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: "#e0e2e8" }}>
-              Discover
-            </h1>
-            <p style={{ fontSize: 12, color: "#5a5f72", marginTop: 2 }}>
-              Top-rated indie games
-            </p>
-          </div>
+  const { data: crawlState, isLoading: crawlLoading } = useCrawlState();
+  const liveProgress = useCrawlProgress(); // real-time event updates
+  const { data: gems, isLoading: gemsLoading } = useHiddenGems(100);
 
-          <div className="flex items-center gap-3">
-            {/* Score filter */}
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: 12, color: "#5a5f72" }}>Score ≥</span>
-              <input
-                type="range"
-                min={50}
-                max={99}
-                step={1}
-                value={minScore}
-                onChange={(e) => setMinScore(Number(e.target.value))}
-                className="w-24"
-                style={{ accentColor: "#3d6ef8" }}
-              />
-              <span
-                className="w-8 text-center font-semibold"
-                style={{ fontSize: 13, color: "#e0e2e8" }}
-              >
-                {minScore}%
-              </span>
-            </div>
+  const start = useStartCrawl();
+  const stop = useStopCrawl();
+  const reset = useResetCrawl();
 
-            {/* Sync button */}
-            <button
-              onClick={() => sync.mutate()}
-              disabled={sync.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                       transition-colors font-medium"
-              style={{
-                background: sync.isPending ? "#1e2540" : "#3d6ef8",
-                color: "#fff",
-                padding: "7px 14px",
-                fontSize: 13,
-                fontWeight: 500,
-                border: "none",
-                cursor: sync.isPending ? "not-allowed" : "pointer",
-                opacity: sync.isPending ? 0.7 : 1,
-                paddingLeft: "0.5rem",
-                paddingRight: "0.5rem",
-              }}
-            >
-              <span style={{ fontSize: 14 }}>↻</span>
-              {sync.isPending ? "Syncing…" : "Sync"}
-            </button>
-          </div>
+  // Use live progress if available, otherwise fall back to DB state
+  const progress =
+    liveProgress ??
+    (crawlState
+      ? {
+          current_page: crawlState.current_page,
+          total_pages: crawlState.total_pages,
+          games_indexed: crawlState.games_indexed,
+          games_qualified: crawlState.games_qualified,
+          status: crawlState.status,
+          percent:
+            crawlState.total_pages > 0
+              ? Math.round(
+                  (crawlState.current_page / crawlState.total_pages) * 100,
+                )
+              : 0,
+        }
+      : null);
+
+  const isRunning = progress?.status === "running";
+  const isComplete = progress?.status === "complete";
+  const isIdle = !progress || progress.status === "idle";
+  const isPaused = progress?.status === "paused";
+
+  // Filter gems by minimum review score
+  const filteredGems = (gems ?? []).filter(
+    (g) => (g.review_score ?? 0) >= minScore,
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* ── Page header ──────────────────────────── */}
+      <div
+        style={{
+          padding: "16px 20px",
+          borderBottom: "1px solid #1a1d28",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: "#e0e2e8" }}>
+            Discover
+          </h1>
+          <p style={{ fontSize: 12, color: "#5a5f72", marginTop: 2 }}>
+            {isComplete
+              ? `${progress?.games_qualified ?? 0} hidden gems found`
+              : "High-quality indie games you might have missed"}
+          </p>
         </div>
 
-        {/* Sync success banner */}
-        {sync.isSuccess && (
-          <div
-            className="mx-5 mt-3 px-3 py-2 rounded-lg flex items-center gap-2 shrink-0"
+        {/* Score filter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 12, color: "#5a5f72" }}>Min score</span>
+          <input
+            type="range"
+            min={80}
+            max={99}
+            step={1}
+            value={minScore}
+            onChange={(e) => setMinScore(Number(e.target.value))}
+            style={{ width: 80, accentColor: "#3d6ef8" }}
+          />
+          <span
             style={{
-              background: "#14291e",
-              border: "1px solid #166534",
-              color: "#4ade80",
-              fontSize: 13,
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#e0e2e8",
+              width: 32,
             }}
           >
-            ✓ Synced {sync.data} games successfully
-          </div>
-        )}
-
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          {/* Loading */}
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center h-64 gap-3">
-              <div
-                className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                style={{
-                  borderColor: "#3d6ef8",
-                  borderTopColor: "transparent",
-                }}
-              />
-              <span style={{ fontSize: 13, color: "#5a5f72" }}>
-                Loading games…
-              </span>
-            </div>
-          )}
-
-          {/* Error */}
-          {isError && (
-            <div
-              className="p-4 rounded-xl"
-              style={{ background: "#2a1515", border: "1px solid #7f1d1d" }}
-            >
-              <p style={{ fontSize: 13, color: "#fca5a5", fontWeight: 500 }}>
-                Failed to load games
-              </p>
-              <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
-                {String(error)}
-              </p>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!isLoading && games?.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-64 gap-3">
-              <span style={{ fontSize: 40 }}>🎮</span>
-              <p style={{ fontSize: 14, color: "#5a5f72" }}>
-                No games found — try syncing or lowering the score filter
-              </p>
-              <button
-                onClick={() => sync.mutate()}
-                className="px-4 py-2 rounded-lg"
-                style={{
-                  background: "#3d6ef8",
-                  color: "#fff",
-                  fontSize: 13,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Sync now
-              </button>
-            </div>
-          )}
-
-          {/* Game count */}
-          {games && games.length > 0 && (
-            <p style={{ fontSize: 12, color: "#5a5f72", marginBottom: 12 }}>
-              {games.length} games
-            </p>
-          )}
-
-          {/* Grid */}
-          {games && games.length > 0 && (
-            <div
-              className="grid gap-3"
-              style={{
-                gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-              }}
-            >
-              {games.map((game) => (
-                <GameCard key={game.app_id} game={game} />
-              ))}
-            </div>
-          )}
+            {minScore}%
+          </span>
         </div>
       </div>
-    );
+
+      {/* ── Crawl control panel ───────────────────── */}
+      {!crawlLoading && (
+        <CrawlPanel
+          progress={progress}
+          isRunning={isRunning}
+          isComplete={isComplete}
+          isIdle={isIdle}
+          isPaused={isPaused}
+          onStart={() => start.mutate()}
+          onStop={() => stop.mutate()}
+          onReset={() => reset.mutate()}
+          startPending={start.isPending}
+          stopPending={stop.isPending}
+        />
+      )}
+
+      {/* ── Content area ─────────────────────────── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        {/* Loading skeletons */}
+        {gemsLoading && <SkeletonGrid count={12} />}
+
+        {/* Empty states */}
+        {!gemsLoading && filteredGems.length === 0 && isIdle && (
+          <EmptyState
+            icon="🔍"
+            title="No games catalogued yet"
+            description="Start the catalogue crawl to discover hidden gems. It runs in the background — you can keep using the app while it works."
+          />
+        )}
+
+        {!gemsLoading &&
+          filteredGems.length === 0 &&
+          (isRunning || isPaused) && (
+            <EmptyState
+              icon="⏳"
+              title="Building your catalogue…"
+              description={`Page ${progress?.current_page ?? 0} of ${progress?.total_pages ?? 50} · ${progress?.games_qualified ?? 0} gems found so far`}
+            />
+          )}
+
+        {!gemsLoading && filteredGems.length === 0 && isComplete && (
+          <EmptyState
+            icon="🎮"
+            title="No games match your filter"
+            description="Try lowering the minimum review score filter above."
+          />
+        )}
+
+        {/* Game grid */}
+        {filteredGems.length > 0 && (
+          <>
+            <p style={{ fontSize: 12, color: "#5a5f72", marginBottom: 12 }}>
+              {filteredGems.length} games · sorted by gem score
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gridAutoRows: "1fr",
+                gap: 12,
+              }}
+            >
+              {filteredGems
+                .sort((a, b) => (b.gem_score ?? 0) - (a.gem_score ?? 0))
+                .map((game) => (
+                  <DiscoverGameCard key={game.app_id} game={game} />
+                ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────
+
+function CrawlPanel({
+  progress,
+  isRunning,
+  isComplete,
+  isIdle,
+  isPaused,
+  onStart,
+  onStop,
+  onReset,
+  startPending,
+  stopPending,
+}: {
+  progress: {
+    current_page: number;
+    total_pages: number;
+    games_indexed: number;
+    games_qualified: number;
+    percent: number;
+    status: string;
+  } | null;
+  isRunning: boolean;
+  isComplete: boolean;
+  isIdle: boolean;
+  isPaused: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  onReset: () => void;
+  startPending: boolean;
+  stopPending: boolean;
+}) {
+  if (isComplete && !progress?.games_qualified) return null;
+
+  const statusColors = {
+    running: { bg: "#0f1e35", border: "#1d4ed8", text: "#60a5fa" },
+    paused: { bg: "#292010", border: "#ca8a04", text: "#fbbf24" },
+    complete: { bg: "#14291e", border: "#16a34a", text: "#4ade80" },
+    idle: { bg: "#1a1d28", border: "#2a2d3a", text: "#5a5f72" },
+  };
+
+  const status = (progress?.status ?? "idle") as keyof typeof statusColors;
+  const colors = statusColors[status] ?? statusColors.idle;
+
+  return (
+    <div
+      style={{
+        margin: "12px 20px 0",
+        padding: "12px 14px",
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        flexShrink: 0,
+      }}
+    >
+      {/* Status dot + label */}
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
+      >
+        <div
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: colors.text,
+            // Pulse animation when running
+            animation: isRunning ? "pulse 1.5s infinite" : "none",
+          }}
+        />
+        <span style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>
+          {isRunning
+            ? "Crawling"
+            : isPaused
+              ? "Paused"
+              : isComplete
+                ? "Complete"
+                : "Not started"}
+        </span>
+      </div>
+
+      {/* Progress bar + stats */}
+      {progress && !isIdle && (
+        <div
+          style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}
+        >
+          {/* Bar */}
+          <div
+            style={{
+              height: 4,
+              background: "#1a1d28",
+              borderRadius: 2,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${progress.percent}%`,
+                background: colors.text,
+                borderRadius: 2,
+                transition: "width 0.5s ease",
+              }}
+            />
+          </div>
+
+          {/* Stats */}
+          <div style={{ display: "flex", gap: 12 }}>
+            <span style={{ fontSize: 11, color: colors.text, opacity: 0.8 }}>
+              Page {progress.current_page}/{progress.total_pages} (
+              {progress.percent}%)
+            </span>
+            <span style={{ fontSize: 11, color: colors.text, opacity: 0.6 }}>
+              {progress.games_qualified} gems found
+            </span>
+            <span style={{ fontSize: 11, color: colors.text, opacity: 0.4 }}>
+              {progress.games_indexed.toLocaleString()} scanned
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isIdle && (
+        <p style={{ fontSize: 12, color: "#5a5f72", margin: 0, flex: 1 }}>
+          Scan ~50,000 Steam games to find hidden gems. Runs in background · ~50
+          min total · resumable anytime.
+        </p>
+      )}
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        {(isIdle || isPaused) && (
+          <CrawlButton
+            onClick={onStart}
+            disabled={startPending}
+            color="#3d6ef8"
+          >
+            {isPaused ? "▶ Resume" : "▶ Start"}
+          </CrawlButton>
+        )}
+
+        {isRunning && (
+          <CrawlButton onClick={onStop} disabled={stopPending} color="#ca8a04">
+            ⏸ Pause
+          </CrawlButton>
+        )}
+
+        {!isIdle && (
+          <CrawlButton onClick={onReset} disabled={false} color="#3a3f58">
+            ↺ Reset
+          </CrawlButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CrawlButton({
+  children,
+  onClick,
+  disabled,
+  color,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled: boolean;
+  color: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: color,
+        color: "#fff",
+        border: "none",
+        borderRadius: 6,
+        padding: "5px 12px",
+        fontSize: 12,
+        fontWeight: 500,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.6 : 1,
+        transition: "opacity 0.15s",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EmptyState({
+  icon,
+  title,
+  description,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "60%",
+        gap: 12,
+        padding: 40,
+      }}
+    >
+      <span style={{ fontSize: 40, opacity: 0.4 }}>{icon}</span>
+      <h2
+        style={{ fontSize: 15, color: "#e0e2e8", fontWeight: 500, margin: 0 }}
+      >
+        {title}
+      </h2>
+      <p
+        style={{
+          fontSize: 12,
+          color: "#5a5f72",
+          textAlign: "center",
+          maxWidth: 300,
+          lineHeight: 1.6,
+        }}
+      >
+        {description}
+      </p>
+    </div>
+  );
 }

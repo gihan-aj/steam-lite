@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State, Manager};
+use tauri::{AppHandle, State };
 
 use crate::AppState;
 use crate::models::{CrawlState, CrawlStatus};

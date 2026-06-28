@@ -1,3 +1,41 @@
+export interface CrawlState {
+  current_page: number;
+  total_pages: number;
+  status: "idle" | "running" | "paused" | "complete";
+  last_page_at: string | null;
+  games_indexed: number;
+  games_qualified: number;
+}
+
+export interface CrawlProgress {
+  current_page: number;
+  total_pages: number;
+  games_indexed: number;
+  games_qualified: number;
+  status: string;
+  percent: number;
+}
+
+export interface DiscoverGame {
+  app_id: number;
+  name: string;
+  review_score: number | null;
+  total_reviews: number | null;
+  is_indie: boolean;
+  price_current: number | null;
+  price_original: number | null;
+  platform_windows: boolean;
+  tags: string | null; // JSON string
+  last_updated: string | null;
+  gem_score: number | null;
+  owners_lower: number | null;
+  avg_playtime: number | null;
+  crawl_source: string | null;
+  header_image: string | null;
+  short_desc: string | null;
+  genres: string | null; // JSON string
+}
+
 export interface Game {
   app_id: number;
   name: string;

@@ -185,6 +185,9 @@ pub fn run() {
             commands::wishlist::refresh_prices,
             commands::discover::get_crawl_state,
             commands::discover::reset_crawl,
+            commands::discover::start_crawl,
+            commands::discover::stop_crawl,
+            commands::discover::get_hidden_gems,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
