@@ -101,6 +101,7 @@ pub struct CrawlProgress {
     pub games_qualified: u32,
     pub status:          String,
     pub percent:         u8,
+    pub wait_seconds:    Option<u32>,
 }
 
 // ─────────────────────────────────────────────
@@ -140,6 +141,46 @@ pub async fn run_crawl_with_handle(
         "Starting crawl"
     );
 
+    const RATE_LIMIT_SECS: u64 = 62;
+
+    if let Some(last_page_str) = &crawl.last_page_at {
+        if let Ok(last_page_time) = chrono::DateTime::parse_from_rfc3339(last_page_str) {
+            let elapsed_secs = Utc::now()
+                .signed_duration_since(last_page_time.with_timezone(&Utc))
+                .num_seconds()
+                .max(0) as u64;
+
+            if elapsed_secs < RATE_LIMIT_SECS {
+                let remaining = RATE_LIMIT_SECS - elapsed_secs;
+
+                tracing::info!(
+                    remaining_secs = remaining,
+                    "Resuming — honouring SteamSpy rate limit wait"
+                );
+
+                // Notify the UI so it can show a countdown
+                emit_progress(&app, &crawl, crawl.current_page, "waiting", Some(remaining as u32));
+                // Wait out the remainder, but respect a stop signal
+                tokio::select! {
+                    _ = tokio::time::sleep(tokio::time::Duration::from_secs(remaining)) => {
+                        // Rate-limit gap satisfied — proceed normally
+                        tracing::info!("Rate-limit wait complete — starting page fetch");
+                    }
+                    _ = stop_rx.changed() => {
+                        if *stop_rx.borrow_and_update() {
+
+                            tracing::info!("Stop during rate-limit wait — saving state");
+
+                            state.crawl.set_status(CrawlStatus::Paused).await?;
+                            emit_progress(&app, &crawl, crawl.current_page, "paused", None);
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let mut page = crawl.current_page;
 
     loop {
@@ -151,7 +192,7 @@ pub async fn run_crawl_with_handle(
         if *stop_rx.borrow() {
             tracing::info!(page, "Crawl stop requested - saving state");
             state.crawl.set_status(CrawlStatus::Paused).await?;
-            emit_progress(&app, &crawl, page, "paused");
+            emit_progress(&app, &crawl, page, "paused", None);
             return Ok(());
         }
 
@@ -164,7 +205,7 @@ pub async fn run_crawl_with_handle(
             );
             state.crawl.set_status(CrawlStatus::Complete).await?;
             crawl.status = CrawlStatus::Complete;
-            emit_progress(&app, &crawl, page, "complete");
+            emit_progress(&app, &crawl, page, "complete", None);
             return Ok(());
         }
 
@@ -181,7 +222,7 @@ pub async fn run_crawl_with_handle(
                tracing::warn!(page, error = %e, "Failed to fetch page, will retry next session");
                 // Don't advance — same page will retry on next run
                 state.crawl.set_status(CrawlStatus::Paused).await?;
-                emit_progress(&app, &crawl, page, "paused");
+                emit_progress(&app, &crawl, page, "paused", None);
                 return Ok(()); 
             }
         };
@@ -192,7 +233,7 @@ pub async fn run_crawl_with_handle(
             state.crawl.set_status(CrawlStatus::Complete).await?;
             // Update total_pages to actual value
             state.crawl.set("total_pages", &page.to_string()).await?;
-            emit_progress(&app, &crawl, page, "complete");
+            emit_progress(&app, &crawl, page, "complete", None);
             return Ok(());
         }
 
@@ -244,7 +285,7 @@ pub async fn run_crawl_with_handle(
         ).await?;
 
         // Notify React of progress
-        emit_progress(&app, &crawl, page + 1, "running");
+        emit_progress(&app, &crawl, page + 1, "running", None);
 
         page += 1;
 
@@ -265,9 +306,10 @@ pub async fn run_crawl_with_handle(
             }
             _ = stop_rx.changed() => {
                 // Stop signal received during wait — exit cleanly
-                if *stop_rx.borrow() {
+                if *stop_rx.borrow_and_update() {
                     tracing::info!("Stop signal during page wait — exiting");
                     state.crawl.set_status(CrawlStatus::Paused).await?;
+                    emit_progress(&app, &crawl, page, "paused", None);
                     return Ok(());
                 }
             }
@@ -279,7 +321,13 @@ pub async fn run_crawl_with_handle(
 // HELPERS
 // ─────────────────────────────────────────────
 
-fn emit_progress(app: &AppHandle, crawl: &CrawlState, current_page: u32, status: &str) {
+fn emit_progress(
+    app: &AppHandle, 
+    crawl: &CrawlState, 
+    current_page: u32, 
+    status: &str,
+    wait_seconds: Option<u32>,
+) {
     let percent = if crawl.total_pages > 0 {
         ((current_page as f32 / crawl.total_pages as f32) * 100.0) as u8
     } else {
@@ -293,6 +341,7 @@ fn emit_progress(app: &AppHandle, crawl: &CrawlState, current_page: u32, status:
         games_qualified: crawl.games_qualified,
         status:          status.to_string(),
         percent,
+        wait_seconds,
     });
 }
 

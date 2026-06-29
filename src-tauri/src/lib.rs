@@ -39,6 +39,7 @@ pub struct AppState{
     pub itad: ItadClient,
     pub limits:   ApiRateLimiters,
     pub crawl_stop_tx: watch::Sender<bool>,
+    pub crawl_task: tokio::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -94,6 +95,7 @@ pub fn run() {
                 itad:     ItadClient::new(),
                 limits:   ApiRateLimiters::new(),
                 crawl_stop_tx,
+                crawl_task: tokio::sync::Mutex::new(None),
                 db:       db_pool,
             };
             app.manage(state);

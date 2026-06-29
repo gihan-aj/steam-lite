@@ -20,6 +20,16 @@ pub async fn get_crawl_state(
 pub async fn reset_crawl(
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
+    {
+        let mut task_guard = state.crawl_task.lock().await;
+        if let Some(old_handle) = task_guard.take() {
+            tracing::info!("Aborting crawl task for reset");
+            old_handle.abort();
+        }
+    }
+
+    let _ = state.crawl_stop_tx.send_replace(true);
+
     state.crawl.reset().await
 }
 
@@ -42,20 +52,28 @@ pub async fn start_crawl(
         return Ok(());
     }
 
+    {
+        let mut task_guard = state.crawl_task.lock().await;
+        if let Some(old_handle) = task_guard.take() {
+            tracing::info!("Aborting previous crawl task before resume");
+            old_handle.abort();
+        }
+    }
+    
     // Reset the stop signal to false before starting
     // 🦀 RUST LESSON: watch::Sender::send
     // Sends a new value to all receivers.
     // We set false = "don't stop" before launching.
-    let _ = state.crawl_stop_tx.send(false);
+    let _ = state.crawl_stop_tx.send_replace(false);
+    state.crawl.set_status(CrawlStatus::Running).await?;
 
     // Subscribe a new receiver for this crawl run
     let stop_rx = state.crawl_stop_tx.subscribe();
-
     let app_clone = app.clone();
 
     tracing::info!("Starting catalogue crawl task");
 
-    tauri::async_runtime::spawn(async move {
+    let handle = tauri::async_runtime::spawn(async move {
         if let Err(e) = catalogue_crawler::run_crawl_with_handle(
             app_clone.clone(),
             stop_rx,
@@ -63,6 +81,8 @@ pub async fn start_crawl(
             tracing::error!(error = %e, "Crawl task failed");
         }
     });
+
+    *state.crawl_task.lock().await = Some(handle);
 
     Ok(())
 }
@@ -74,7 +94,7 @@ pub async fn stop_crawl(
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     tracing::info!("Stop signal sent to crawl");
-    let _ = state.crawl_stop_tx.send(true);
+    let _ = state.crawl_stop_tx.send_replace(true);
     Ok(())
 }
 

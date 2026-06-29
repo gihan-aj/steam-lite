@@ -14,36 +14,45 @@ export function Discover() {
   const [minScore, setMinScore] = useState(85);
 
   const { data: crawlState, isLoading: crawlLoading } = useCrawlState();
-  const liveProgress = useCrawlProgress(); // real-time event updates
+  const { liveProgress, countdown } = useCrawlProgress(); // real-time event updates
   const { data: gems, isLoading: gemsLoading } = useHiddenGems(100);
 
   const start = useStartCrawl();
   const stop = useStopCrawl();
   const reset = useResetCrawl();
 
+  const liveIsStale =
+    liveProgress !== null &&
+    crawlState !== undefined &&
+    (liveProgress.status === "paused" || liveProgress.status === "complete") &&
+    crawlState.status === "running";
+
   // Use live progress if available, otherwise fall back to DB state
   const progress =
-    liveProgress ??
-    (crawlState
-      ? {
-          current_page: crawlState.current_page,
-          total_pages: crawlState.total_pages,
-          games_indexed: crawlState.games_indexed,
-          games_qualified: crawlState.games_qualified,
-          status: crawlState.status,
-          percent:
-            crawlState.total_pages > 0
-              ? Math.round(
-                  (crawlState.current_page / crawlState.total_pages) * 100,
-                )
-              : 0,
-        }
-      : null);
+    liveIsStale || liveProgress === null
+      ? crawlState
+        ? {
+            current_page: crawlState.current_page,
+            total_pages: crawlState.total_pages,
+            games_indexed: crawlState.games_indexed,
+            games_qualified: crawlState.games_qualified,
+            status: crawlState.status,
+            wait_seconds: undefined,
+            percent:
+              crawlState.total_pages > 0
+                ? Math.round(
+                    (crawlState.current_page / crawlState.total_pages) * 100,
+                  )
+                : 0,
+          }
+        : null
+      : liveProgress;
 
   const isRunning = progress?.status === "running";
   const isComplete = progress?.status === "complete";
   const isIdle = !progress || progress.status === "idle";
   const isPaused = progress?.status === "paused";
+  const isWaiting = progress?.status === "waiting";
 
   // Filter gems by minimum review score
   const filteredGems = (gems ?? []).filter(
@@ -107,6 +116,8 @@ export function Discover() {
           isComplete={isComplete}
           isIdle={isIdle}
           isPaused={isPaused}
+          isWaiting={isWaiting}
+          countdown={countdown}
           onStart={() => start.mutate()}
           onStop={() => stop.mutate()}
           onReset={() => reset.mutate()}
@@ -182,6 +193,8 @@ function CrawlPanel({
   isComplete,
   isIdle,
   isPaused,
+  isWaiting,
+  countdown,
   onStart,
   onStop,
   onReset,
@@ -200,6 +213,8 @@ function CrawlPanel({
   isComplete: boolean;
   isIdle: boolean;
   isPaused: boolean;
+  isWaiting: boolean;
+  countdown: number | null;
   onStart: () => void;
   onStop: () => void;
   onReset: () => void;
@@ -210,6 +225,7 @@ function CrawlPanel({
 
   const statusColors = {
     running: { bg: "#0f1e35", border: "#1d4ed8", text: "#60a5fa" },
+    waiting: { bg: "#1a1a10", border: "#a16207", text: "#eab308" },
     paused: { bg: "#292010", border: "#ca8a04", text: "#fbbf24" },
     complete: { bg: "#14291e", border: "#16a34a", text: "#4ade80" },
     idle: { bg: "#1a1d28", border: "#2a2d3a", text: "#5a5f72" },
@@ -249,11 +265,13 @@ function CrawlPanel({
         <span style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>
           {isRunning
             ? "Crawling"
-            : isPaused
-              ? "Paused"
-              : isComplete
-                ? "Complete"
-                : "Not started"}
+            : isWaiting
+              ? "Rate limit"
+              : isPaused
+                ? "Paused"
+                : isComplete
+                  ? "Complete"
+                  : "Not started"}
         </span>
       </div>
 
@@ -284,16 +302,30 @@ function CrawlPanel({
 
           {/* Stats */}
           <div style={{ display: "flex", gap: 12 }}>
-            <span style={{ fontSize: 11, color: colors.text, opacity: 0.8 }}>
-              Page {progress.current_page}/{progress.total_pages} (
-              {progress.percent}%)
-            </span>
-            <span style={{ fontSize: 11, color: colors.text, opacity: 0.6 }}>
-              {progress.games_qualified} gems found
-            </span>
-            <span style={{ fontSize: 11, color: colors.text, opacity: 0.4 }}>
-              {progress.games_indexed.toLocaleString()} scanned
-            </span>
+            {isWaiting && countdown !== null ? (
+              <span style={{ fontSize: 11, color: colors.text, opacity: 0.9 }}>
+                Next page in {countdown}s — respecting SteamSpy rate limit
+              </span>
+            ) : (
+              <>
+                <span
+                  style={{ fontSize: 11, color: colors.text, opacity: 0.8 }}
+                >
+                  Page {progress.current_page}/{progress.total_pages} (
+                  {progress.percent}%)
+                </span>
+                <span
+                  style={{ fontSize: 11, color: colors.text, opacity: 0.6 }}
+                >
+                  {progress.games_qualified} gems found
+                </span>
+                <span
+                  style={{ fontSize: 11, color: colors.text, opacity: 0.4 }}
+                >
+                  {progress.games_indexed.toLocaleString()} scanned
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -307,7 +339,7 @@ function CrawlPanel({
 
       {/* Buttons */}
       <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-        {(isIdle || isPaused) && (
+        {(isIdle || isPaused) && !isWaiting && (
           <CrawlButton
             onClick={onStart}
             disabled={startPending}
@@ -317,7 +349,7 @@ function CrawlPanel({
           </CrawlButton>
         )}
 
-        {isRunning && (
+        {(isRunning || isWaiting) && (
           <CrawlButton onClick={onStop} disabled={stopPending} color="#ca8a04">
             ⏸ Pause
           </CrawlButton>

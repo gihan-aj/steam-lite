@@ -14,6 +14,7 @@ export interface CrawlProgress {
   games_qualified: number;
   status: string;
   percent: number;
+  wait_seconds?: number;
 }
 
 export interface DiscoverGame {
