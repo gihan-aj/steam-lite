@@ -1,10 +1,10 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-mod commands;
 mod api;
-mod services;
+mod commands;
 mod db;
-mod models;
 mod error;
+mod models;
+mod services;
 
 use chrono::Utc;
 pub use error::{AppError, Result};
@@ -14,20 +14,20 @@ use sqlx::SqlitePool;
 use tauri::{Emitter, Manager};
 
 use db::{
-    game_repository::GameRepository,
-    price_repository::PriceRepository,
+    crawl_repository::CrawlRepository, game_repository::GameRepository,
+    price_repository::PriceRepository, settings_repository::SettingsRepository,
     wishlist_repository::WishlistRepository,
-    settings_repository::SettingsRepository,
-    crawl_repository::CrawlRepository,
 };
 use tokio::sync::watch;
 
 use crate::api::itad::ItadClient;
-use crate::api::steamspy::SteamSpyClient;
 use crate::api::steam::SteamClient;
+use crate::api::steamspy::SteamSpyClient;
+use crate::models::CrawlStatus;
+use crate::services::catalogue_crawler;
 use api::rate_limiter::ApiRateLimiters;
 
-pub struct AppState{
+pub struct AppState {
     pub db: SqlitePool,
     pub games: GameRepository,
     pub prices: PriceRepository,
@@ -37,7 +37,7 @@ pub struct AppState{
     pub steamspy: SteamSpyClient,
     pub steam: SteamClient,
     pub itad: ItadClient,
-    pub limits:   ApiRateLimiters,
+    pub limits: ApiRateLimiters,
     pub crawl_stop_tx: watch::Sender<bool>,
     pub crawl_task: tokio::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
 }
@@ -52,7 +52,7 @@ pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "steam_lite=info,warn".into())
+                .unwrap_or_else(|_| "steam_lite=info,warn".into()),
         )
         .with_target(false) //   Don't show module path
         .with_thread_ids(false)
@@ -68,7 +68,9 @@ pub fn run() {
                 // Gets the app's data directory — on Windows this is:
                 // C:\Users\{name}\AppData\Roaming\{app-name}\
                 // This is the correct place to store user data on all platforms.
-                let app_data_dir = app.path().app_data_dir()
+                let app_data_dir = app
+                    .path()
+                    .app_data_dir()
                     .expect("Could not resolve app data directory");
                 std::fs::create_dir_all(&app_data_dir)
                     .expect("Could not create app data directory");
@@ -77,7 +79,8 @@ pub fn run() {
                     .to_string_lossy()
                     .to_string();
 
-                db::init_db(&db_path).await
+                db::init_db(&db_path)
+                    .await
                     .expect("Failed to initialise database")
             });
 
@@ -85,18 +88,18 @@ pub fn run() {
 
             // Register the pool in Tauri's state container
             let state = AppState {
-                games:    GameRepository::new(db_pool.clone()),
-                prices:   PriceRepository::new(db_pool.clone()),
+                games: GameRepository::new(db_pool.clone()),
+                prices: PriceRepository::new(db_pool.clone()),
                 wishlist: WishlistRepository::new(db_pool.clone()),
                 settings: SettingsRepository::new(db_pool.clone()),
                 crawl: CrawlRepository::new(db_pool.clone()),
                 steamspy: SteamSpyClient::new(),
-                steam:    SteamClient::new(), 
-                itad:     ItadClient::new(),
-                limits:   ApiRateLimiters::new(),
+                steam: SteamClient::new(),
+                itad: ItadClient::new(),
+                limits: ApiRateLimiters::new(),
                 crawl_stop_tx,
                 crawl_task: tokio::sync::Mutex::new(None),
-                db:       db_pool,
+                db: db_pool,
             };
             app.manage(state);
 
@@ -110,9 +113,7 @@ pub fn run() {
             // `move` captures app_handle by value (moves ownership into the closure).
             tauri::async_runtime::spawn(async move {
                 // Check every 30 minutes
-                let mut interval = tokio::time::interval(
-                    tokio::time::Duration::from_secs(30 * 60)
-                );
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30 * 60));
                 interval.tick().await; // skip immediate first tick
 
                 loop {
@@ -129,13 +130,16 @@ pub fn run() {
 
                     match sync_service::run_daily_sync(&state).await {
                         Ok(result) => {
-                            let _ = bg_handle.emit("prices_refreshed", serde_json::json!({
-                                "updated":  result.games_checked,
-                                "changed":  result.prices_changed,
-                                "added":    result.games_added,
-                                "removed":  result.games_removed,
-                                "source":   "background",
-                            }));
+                            let _ = bg_handle.emit(
+                                "prices_refreshed",
+                                serde_json::json!({
+                                    "updated":  result.games_checked,
+                                    "changed":  result.prices_changed,
+                                    "added":    result.games_added,
+                                    "removed":  result.games_removed,
+                                    "source":   "background",
+                                }),
+                            );
                         }
                         Err(e) => {
                             tracing::error!(error = %e, "Background sync failed");
@@ -157,7 +161,8 @@ pub fn run() {
                     Err(_) => return,
                 };
 
-                let is_due = settings.last_synced_at
+                let is_due = settings
+                    .last_synced_at
                     .map(|last| (Utc::now() - last).num_hours() >= settings.sync_interval_hours)
                     .unwrap_or(true);
 
@@ -170,6 +175,46 @@ pub fn run() {
                 }
             });
 
+            let crawl_resume_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
+
+                let state = crawl_resume_handle.state::<AppState>();
+
+                let crawl = match state.crawl.load().await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        tracing::error!(error = %e, "Startup: failed to load crawl state");
+                        return;
+                    }
+                };
+
+                if crawl.status != CrawlStatus::Running {
+                    tracing::debug!(status = ?crawl.status, "Startup: crawl not auto-resuming");
+                    return;
+                }
+
+                tracing::info!(
+                    page = crawl.current_page,
+                    "Startup: crawl was interuppted - auto-resuming"
+                );
+
+                state.crawl_stop_tx.send_replace(false);
+                let stop_rx = state.crawl_stop_tx.subscribe();
+
+                let app_clone = crawl_resume_handle.clone();
+
+                let handle = tauri::async_runtime::spawn(async move {
+                    if let Err(e) =
+                        catalogue_crawler::run_crawl_with_handle(app_clone, stop_rx).await
+                    {
+                        tracing::error!(error = %e, "Startup: auto-resume crawl failed");
+                    }
+                });
+
+                *state.crawl_task.lock().await = Some(handle);
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -180,7 +225,7 @@ pub fn run() {
             commands::settings::set_setting,
             commands::settings::save_settings,
             commands::wishlist::fetch_wishlist,
-            commands::wishlist::get_wishlist, 
+            commands::wishlist::get_wishlist,
             commands::wishlist::remove_from_wishlist,
             commands::wishlist::enrich_wishlist_prices,
             commands::wishlist::get_game_price_history,

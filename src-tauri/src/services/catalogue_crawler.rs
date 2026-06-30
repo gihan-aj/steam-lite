@@ -201,12 +201,17 @@ pub async fn run_crawl_with_handle(
             tracing::info!(
                 indexed   = crawl.games_indexed,
                 qualified = crawl.games_qualified,
-                "Crawl complete"
+                "Adjusting total pages"
             );
-            state.crawl.set_status(CrawlStatus::Complete).await?;
-            crawl.status = CrawlStatus::Complete;
-            emit_progress(&app, &crawl, page, "complete", None);
-            return Ok(());
+            // state.crawl.set_status(CrawlStatus::Complete).await?;
+            // crawl.status = CrawlStatus::Complete;
+            // emit_progress(&app, &crawl, page, "complete", None);
+            // return Ok(());
+            let total_pages = crawl.total_pages + 10;
+            let total_pages_str = total_pages.clone().to_string();
+
+            state.crawl.set("total_pages", total_pages_str.as_str()).await?;
+            crawl.total_pages = total_pages.clone();
         }
 
         tracing::info!(page, total = crawl.total_pages, "Fetching page");
