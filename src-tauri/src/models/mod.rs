@@ -22,6 +22,7 @@ pub struct GameRow {
     pub header_image:     Option<String>,
     pub short_desc:       Option<String>,
     pub genres:           Option<String>,
+    pub last_price_check: Option<DateTime<Utc>>,
 }
 
 /// Raw database row for the `wishlist` table.
@@ -95,6 +96,7 @@ pub struct Game {
     pub header_image:       Option<String>,
     pub short_desc:         Option<String>,
     pub genres:             Option<String>,
+    pub last_price_check:   Option<DateTime<Utc>>,
 }
 
 impl From<GameRow> for Game {
@@ -116,7 +118,8 @@ impl From<GameRow> for Game {
             crawl_source:     row.crawl_source,
             header_image:     row.header_image,
             short_desc:       row.short_desc,
-            genres:           row.genres
+            genres:           row.genres,
+            last_price_check: row.last_price_check,
         }
     }
 }

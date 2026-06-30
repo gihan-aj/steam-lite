@@ -1,3 +1,4 @@
+use chrono::Utc;
 use tauri::{AppHandle, Emitter, State };
 
 use crate::AppState;
@@ -126,12 +127,21 @@ pub async fn enrich_discover_games(
 ) -> Result<usize, AppError>{
     let settings = state.settings.load().await?;
     let country = settings.country_code.clone();
+    let sync_interval_hours = settings.sync_interval_hours.clone();
     let mut enriched = 0;
 
+    let stale_threshold = Utc::now() - chrono::Duration::hours(sync_interval_hours);
+
     for app_id in &app_ids {
-        // Skip if already has image
-        if let Ok(Some(game)) = state.games.get_by_id(*app_id).await {
-            if game.header_image.is_some() {
+        let existing = state.games.get_by_id(*app_id).await.ok().flatten();
+
+        if let Some(game) = &existing {
+            let has_image = game.header_image.is_some();
+            let is_fresh = game.last_price_check
+                .map(|t| t > stale_threshold)
+                .unwrap_or(false);
+
+            if has_image && is_fresh {
                 continue;
             }
         }
@@ -141,10 +151,12 @@ pub async fn enrich_discover_games(
         if let Ok(Some(details)) = state.steam.get_app_details(*app_id, &country).await {
             if let Ok(Some(mut game)) = state.games.get_by_id(*app_id).await {
                 game.header_image = Some(details.header_image.clone())
-                    .filter(|s| !s.is_empty());
+                    .filter(|s| !s.is_empty())
+                    .or(game.header_image);   // keep old image if Steam returns empty
 
                 game.short_desc = Some(details.short_description.clone())
-                    .filter(|s| !s.is_empty());
+                    .filter(|s| !s.is_empty())
+                    .or(game.short_desc);
 
                 let genres: Vec<String> = details.genres
                     .iter()
@@ -153,6 +165,8 @@ pub async fn enrich_discover_games(
 
                 game.genres = serde_json::to_string(&genres).ok();
                 game.is_indie = details.is_indie();
+
+                game.last_price_check = Some(Utc::now());
 
                 // Update price with regional data
                 if let Some(price) = &details.price_overview {
@@ -169,6 +183,6 @@ pub async fn enrich_discover_games(
             }
         }
     }
-    tracing::info!(enriched, "Discover enrichment complete");
+    tracing::info!(enriched, "Discover enrichment/refresh complete");
     Ok(enriched)
 }

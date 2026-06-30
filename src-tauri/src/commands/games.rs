@@ -131,6 +131,7 @@ fn steamspy_to_game(spy: &crate::api::steamspy::SteamSpyGame) -> Game {
         header_image:    None,
         short_desc:      None,
         genres:          None,
+        last_price_check:None,
     }
 }
 

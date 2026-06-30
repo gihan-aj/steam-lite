@@ -364,7 +364,13 @@ pub async fn run_daily_sync(state: &AppState) -> Result<SyncResult> {
     // Step 3: Light price refresh for all games
     let price_result = refresh_prices(state).await?;
 
-    // Step 4: Save last synced timestamp
+    // Step 4: Discover catalogue price refresh
+    // let discover_refreshed = refresh_discover_prices(state).await
+    //     .unwrap_or(0);
+
+    // tracing::info!(discover_refreshed, "Discover prices refreshed");
+
+    // Step 5: Save last synced timestamp
     let _ = state.settings
         .set("last_synced_at", &Utc::now().to_rfc3339())
         .await;
@@ -388,3 +394,68 @@ pub async fn run_daily_sync(state: &AppState) -> Result<SyncResult> {
 
     Ok(combined)
 }
+
+// / Refresh prices for Discover catalogue games that haven't been
+// / checked recently. Only runs for games that have already been
+// / fully enriched (have a header_image).
+// /
+// / Called from the daily sync — updates pricing without re-fetching
+// / images or genres (those never change).
+// pub async fn refresh_discover_prices(state: &AppState) -> Result<u32> {
+//     let settings = state.settings.load().await?;
+//     let country  = settings.country_code.clone();
+//     let sync_interval_hours = settings.sync_interval_hours.clone();
+
+//     // Only refresh games not checked in the last 24 hours
+//     // We don't want to hammer Steam's API on every sync
+//     let stale_threshold = Utc::now() - Duration::hours(sync_interval_hours);
+
+//     let stale_games = state.games
+//         .get_stale_priced_games(stale_threshold, 50)
+//         .await?;
+
+//     if stale_games.is_empty() {
+//         tracing::info!("No stale discover games to refresh");
+//         return Ok(0);
+//     }
+
+//     tracing::info!(count = stale_games.len(), "Refreshing discover game prices");
+
+//     let mut refreshed = 0u32;
+
+//     for mut game in stale_games {
+//         state.limits.steam_store.acquire().await;
+
+//         match state.steam.get_app_details(game.app_id, &country).await {
+//             Ok(Some(details)) => {
+//                 if let Some(price) = &details.price_overview {
+//                     game.price_current = Some(price.final_price);
+//                     game.price_original = Some(price.initial);
+//                 }
+
+//                 game.last_price_check = Some(Utc::now());
+
+//                 // Recompute gem score with fresh price data ????
+
+//                 let _ = state.games.upsert(&game).await;
+//                 refreshed += 1;
+
+//                 tracing::info!(
+//                     game = %game.name,
+//                     price = ?game.price_current,
+//                     "Price refreshed"
+//                 );
+//             }
+//             Ok(None) => {
+//                 game.last_price_check = Some(Utc::now());
+//                 let _ = state.games.upsert(&game).await;
+//             }
+//             Err(e) => {
+//                 tracing::warn!(game = %game.name, error = %e, "Price refresh failed");
+//             }
+//         }
+//     }
+
+//     tracing::info!(refreshed, "Discover price refresh complete");
+//     Ok(refreshed)
+// }

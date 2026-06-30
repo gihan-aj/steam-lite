@@ -373,6 +373,7 @@ fn steamspy_to_game(spy: &SteamSpyGame, gem_score: f64) -> Game {
         crawl_source:    Some(format!("all_page_{}", 0)),  // updated by caller
         header_image:    None,     // fetched separately (rate limited)
         short_desc:      None,
-        genres:          None, 
+        genres:          None,
+        last_price_check: None,
     }
 }

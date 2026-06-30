@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use sqlx::{SqlitePool};
 use crate::models::{Game, GameRow};
 use crate::error::Result;
@@ -42,7 +43,8 @@ impl GameRepository {
                     crawl_source, 
                     header_image, 
                     short_desc, 
-                    genres
+                    genres,
+                    last_price_check as "last_price_check: chrono::DateTime<chrono::Utc>"
                 FROM games
                 WHERE review_score >= ?
                 AND is_indie = 0
@@ -88,7 +90,8 @@ impl GameRepository {
                 crawl_source, 
                 header_image, 
                 short_desc, 
-                genres
+                genres,
+                last_price_check as "last_price_check: chrono::DateTime<chrono::Utc>"
             FROM games
             WHERE gem_score IS NOT NULL
                 AND gem_score > 0
@@ -135,7 +138,8 @@ impl GameRepository {
                 crawl_source, 
                 header_image, 
                 short_desc, 
-                genres
+                genres,
+                last_price_check as "last_price_check: chrono::DateTime<chrono::Utc>"
             FROM games
             WHERE app_id = ?
             "#,
@@ -162,8 +166,9 @@ impl GameRepository {
                 is_indie, price_current, price_original,
                 platform_windows, tags, last_updated,
                 gem_score, owners_lower, avg_playtime,
-                crawl_source, header_image, short_desc, genres
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                crawl_source, header_image, short_desc, genres,
+                last_price_check
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             game.app_id,
             game.name,
@@ -182,6 +187,7 @@ impl GameRepository {
             game.header_image,
             game.short_desc,
             game.genres,
+            game.last_price_check
         )
         .execute(&self.pool)
         .await?;
@@ -203,8 +209,8 @@ impl GameRepository {
                     is_indie, price_current, price_original,
                     platform_windows, tags, last_updated,
                     gem_score, owners_lower, avg_playtime,
-                    crawl_source, header_image, short_desc, genres
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    crawl_source, header_image, short_desc, genres, last_price_check
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 "#,
                 game.app_id,
                 game.name,
@@ -223,6 +229,7 @@ impl GameRepository {
                 game.header_image,
                 game.short_desc,
                 game.genres,
+                game.last_price_check
             )
             .execute(&mut *tx)
             .await?;
@@ -262,4 +269,43 @@ impl GameRepository {
         // rows_affected() tells us how many rows were deleted
         Ok(result.rows_affected())
     }
+
+    // / Get fully-enriched games whose price hasn't been checked recently.
+    // / `stale_before` = only return games not checked since this timestamp.
+    // / `limit` = max games to return per sync run (avoids long sync times).
+//     pub async fn get_stale_priced_games(
+//         &self,
+//         stale_before: DateTime<Utc>,
+//         limit: i64,
+//     ) -> Result<Vec<Game>> {
+//         let stale_before_str = stale_before.to_rfc3339();
+//         let rows = sqlx::query_as!(
+//             GameRow,
+//             r#"
+//             SELECT
+//                 app_id, name, review_score, total_reviews,
+//                 is_indie, price_current, price_original,
+//                 platform_windows, tags, last_updated as "last_updated: chrono::DateTime<chrono::Utc>",
+//                 gem_score, owners_lower, avg_playtime,
+//                 crawl_source, header_image, short_desc, genres,
+//                 last_price_check as "last_price_check: std::option::Option<chrono::DateTime<chrono::Utc>>"
+//             FROM games
+//             WHERE header_image IS NOT NULL
+//                 AND (
+//                     last_price_check IS NULL
+//                     OR last_price_check < ?
+//                 )
+//                 AND gem_score IS NOT NULL
+//             ORDER BY gem_score DESC
+//             LIMIT ?
+//             "#,
+//             stale_before_str,
+//             limit
+//         )
+//         .fetch_all(&self.pool)
+//         .await?;
+
+//         Ok(rows.into_iter().map(|r| r.into()).collect())
+//     }
 }
+
