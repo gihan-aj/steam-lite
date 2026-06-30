@@ -67,7 +67,7 @@ impl GameRepository {
     }
 
     /// Fetch top hidden gems — games with highest gem_score.
-    pub async fn get_hidden_gems(&self, limit: i64) -> Result<Vec<Game>> {
+    pub async fn get_hidden_gems(&self, limit: i64, offset: i64,) -> Result<Vec<Game>> {
         let rows = sqlx::query_as!(
             GameRow,
             r#"
@@ -91,16 +91,27 @@ impl GameRepository {
                 genres
             FROM games
             WHERE gem_score IS NOT NULL
-            AND gem_score > 0
+                AND gem_score > 0
             ORDER BY gem_score DESC
-            LIMIT ?
+            LIMIT ? OFFSET ?
             "#,
-            limit
+            limit,
+            offset
         )
         .fetch_all(&self.pool)
         .await?;
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+
+    pub async fn count_hidden_gems(&self) -> Result<i64> {
+        let row = sqlx::query!(
+           "SELECT COUNT(*) as count FROM games WHERE gem_score IS NOT NULL AND gem_score > 0"
+        )
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(row.count)
     }
 
     pub async fn get_by_id(&self, app_id: i64) -> Result<Option<Game>> {

@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { CrawlProgress, CrawlState, DiscoverGame } from "../types";
 import { useEffect, useRef, useState } from "react";
@@ -132,14 +137,33 @@ export function useCrawlProgress() {
 
 // ── Hidden gems ───────────────────────────────────────────────────
 
-export function useHiddenGems(limit: number = 100) {
-  return useQuery({
-    queryKey: ["hidden_gems", limit],
-    queryFn: () => {
-      console.log("Fetching hidden gems...");
-      return invoke<DiscoverGame[]>("get_hidden_gems", { limit });
+const PAGE_SIZE = 30;
+
+export function useHiddenGems() {
+  return useInfiniteQuery({
+    queryKey: ["hidden_gems"],
+    queryFn: ({ pageParam = 0 }) =>
+      invoke<DiscoverGame[]>("get_hidden_gems", {
+        limit: PAGE_SIZE,
+        offset: pageParam,
+      }),
+
+    initialPageParam: 0,
+
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.length * PAGE_SIZE;
     },
+
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCountHiddenGems() {
+  return useQuery({
+    queryKey: ["hidden_gems_count"],
+    queryFn: () => invoke<number>("count_hidden_gems"),
+    staleTime: 60 * 1000,
   });
 }
 

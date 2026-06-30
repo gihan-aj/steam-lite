@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  useCountHiddenGems,
   useCrawlProgress,
   useCrawlState,
   useEnrichDiscoverGames,
@@ -10,17 +11,58 @@ import {
 } from "../hooks/useDiscover";
 import { DiscoverGameCard } from "../components/DiscoverGameCard";
 import { SkeletonGrid } from "../components/SkeletonCard";
+import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
+
+const PAGE_SIZE = 30;
 
 export function Discover() {
   const [minScore, setMinScore] = useState(85);
 
   const { data: crawlState, isLoading: crawlLoading } = useCrawlState();
   const { liveProgress, countdown } = useCrawlProgress(); // real-time event updates
-  const { data: gems, isLoading: gemsLoading } = useHiddenGems(100);
+  const {
+    data: gems,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: gemsLoading,
+  } = useHiddenGems();
+  const { data: totalCount } = useCountHiddenGems();
 
   const start = useStartCrawl();
   const stop = useStopCrawl();
   const reset = useResetCrawl();
+  const enrich = useEnrichDiscoverGames();
+
+  const allGems = useMemo(
+    () => gems?.pages.flatMap((page) => page) ?? [],
+    [gems],
+  );
+
+  // Filter gems by minimum review score
+  const filteredGems = useMemo(
+    () => allGems.filter((g) => (g.review_score ?? 0) >= minScore),
+    [allGems, minScore],
+  );
+
+  useEffect(() => {
+    const needsEnrichment = allGems
+      .filter((g) => !g.header_image)
+      .map((g) => g.app_id);
+
+    if (needsEnrichment.length > 0) {
+      enrich.mutate(needsEnrichment);
+    }
+  }, [allGems.length]);
+
+  // Infinite scroll — load next page when sentinel enters viewport
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const sentinelRef = useIntersectionObserver(loadMore);
 
   const liveIsStale =
     liveProgress !== null &&
@@ -55,27 +97,6 @@ export function Discover() {
   const isPaused = progress?.status === "paused";
   const isWaiting = progress?.status === "waiting";
 
-  // Filter gems by minimum review score
-  const filteredGems = (gems ?? []).filter(
-    (g) => (g.review_score ?? 0) >= minScore,
-  );
-
-  const enrich = useEnrichDiscoverGames();
-
-  useEffect(() => {
-    if (!gems || gems.length === 0) return;
-
-    const needsEnrichment = gems
-      .sort((a, b) => (b.gem_score ?? 0) - (a.gem_score ?? 0))
-      .slice(0, 40)
-      .filter((g) => !g.header_image)
-      .map((g) => g.app_id);
-
-    if (needsEnrichment.length > 0) {
-      enrich.mutate(needsEnrichment);
-    }
-  }, [gems?.length]);
-
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* ── Page header ──────────────────────────── */}
@@ -94,9 +115,9 @@ export function Discover() {
             Discover
           </h1>
           <p style={{ fontSize: 12, color: "#5a5f72", marginTop: 2 }}>
-            {isComplete
-              ? `${progress?.games_qualified ?? 0} hidden gems found`
-              : "High-quality indie games you might have missed"}
+            {totalCount
+              ? `${totalCount.toLocaleString()} hidden gems catalogued`
+              : "High-quality games you might have missed"}
           </p>
         </div>
 
@@ -178,8 +199,15 @@ export function Discover() {
         {/* Game grid */}
         {filteredGems.length > 0 && (
           <>
+            {/* Loaded count indicator */}
             <p style={{ fontSize: 12, color: "#5a5f72", marginBottom: 12 }}>
-              {filteredGems.length} games · sorted by gem score
+              Showing {filteredGems.length}
+              {totalCount ? ` of ${totalCount.toLocaleString()}` : ""} gems
+              {enrich.isPending && (
+                <span style={{ color: "#3d6ef8", marginLeft: 8 }}>
+                  · fetching images…
+                </span>
+              )}
             </p>
             <div
               style={{
@@ -195,6 +223,38 @@ export function Discover() {
                   <DiscoverGameCard key={game.app_id} game={game} />
                 ))}
             </div>
+
+            {/* Load more skeletons while fetching next page */}
+            {isFetchingNextPage && (
+              <div style={{ marginTop: 12 }}>
+                <SkeletonGrid count={6} />
+              </div>
+            )}
+
+            {/* Sentinel div — triggers loadMore when scrolled into view */}
+            {/* Invisible element at the bottom of the list */}
+            <div
+              ref={sentinelRef}
+              style={{ height: 1, marginTop: 12 }}
+              aria-hidden="true"
+            />
+
+            {/* End of list message */}
+            {!hasNextPage && filteredGems.length > 0 && (
+              <p
+                style={{
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: "#3a3f58",
+                  marginTop: 20,
+                  padding: "12px 0",
+                }}
+              >
+                {filteredGems.length === allGems.length
+                  ? `All ${filteredGems.length} gems loaded`
+                  : `Showing ${filteredGems.length} matching games`}
+              </p>
+            )}
           </>
         )}
       </div>

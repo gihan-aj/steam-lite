@@ -103,8 +103,16 @@ pub async fn stop_crawl(
 pub async fn get_hidden_gems(
     state: State<'_, AppState>,
     limit: i64,
+    offset: i64,
 ) -> Result<Vec<crate::models::Game>, AppError> {
-    state.games.get_hidden_gems(limit).await
+    state.games.get_hidden_gems(limit, offset).await
+}
+
+#[tauri::command]
+pub async fn count_hidden_gems(
+    state: State<'_, AppState>,
+) -> Result<i64, AppError> {
+    state.games.count_hidden_gems().await
 }
 
 /// Fetch Steam appdetails for games that don't have images yet.
