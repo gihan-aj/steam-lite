@@ -39,15 +39,15 @@ pub struct SteamSpyGame {
     // This is like [JsonPropertyName] in C# System.Text.Json.
     /// Current price as a STRING in cents e.g. "999" = $9.99, "0" = Free
     #[serde(default)]
-    pub price: String,
+    pub price: Option<String>,
 
     /// Original price before discount, as a STRING in cents
     #[serde(rename = "initialprice", default)]
-    pub initial_price: String,
+    pub initial_price: Option<String>,
 
     /// Current discount percentage as a STRING e.g. "75"
     #[serde(default)]
-    pub discount: String,
+    pub discount: Option<String>,
 
     /// Peak concurrent users yesterday
     pub ccu: Option<i64>,
@@ -73,23 +73,27 @@ impl SteamSpyGame {
     /// Parse the price string to cents (i64)
     /// Returns None if the string is empty or "0" and it's the initial price
     pub fn price_cents(&self) -> Option<i64> {
-        match self.price.parse::<i64>() {
-            Ok(0) => None, // Free game
-            Ok(p) => Some(p),
-            Err(_) => None,
-        }
+        self.price
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .and_then(|s| s.parse::<i64>().ok())
+            .filter(|&p| p > 0)
     }
 
     pub fn initial_price_cents(&self) -> Option<i64> {
-        match self.initial_price.parse::<i64>() {
-            Ok(0) => None,
-            Ok(p) => Some(p),
-            Err(_) => None,
-        }
+        self.initial_price
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .and_then(|s| s.parse::<i64>().ok())
+            .filter(|&p| p > 0)
     }
 
     pub fn discount_percent(&self) -> i64 {
-        self.discount.parse::<i64>().unwrap_or(0)
+        self.discount
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0)
     }
 
     /// Returns true if the game has the "Indie" tag with meaningful votes

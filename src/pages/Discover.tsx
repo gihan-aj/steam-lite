@@ -46,12 +46,10 @@ export function Discover() {
   );
 
   useEffect(() => {
-    const needsEnrichment = allGems
-      .filter((g) => !g.header_image)
-      .map((g) => g.app_id);
+    const needsCheck = allGems.map((g) => g.app_id);
 
-    if (needsEnrichment.length > 0) {
-      enrich.mutate(needsEnrichment);
+    if (needsCheck.length > 0) {
+      enrich.mutate(needsCheck);
     }
   }, [allGems.length]);
 
