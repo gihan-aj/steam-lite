@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useCrawlProgress,
   useCrawlState,
+  useEnrichDiscoverGames,
   useHiddenGems,
   useResetCrawl,
   useStartCrawl,
@@ -58,6 +59,22 @@ export function Discover() {
   const filteredGems = (gems ?? []).filter(
     (g) => (g.review_score ?? 0) >= minScore,
   );
+
+  const enrich = useEnrichDiscoverGames();
+
+  useEffect(() => {
+    if (!gems || gems.length === 0) return;
+
+    const needsEnrichment = gems
+      .sort((a, b) => (b.gem_score ?? 0) - (a.gem_score ?? 0))
+      .slice(0, 40)
+      .filter((g) => !g.header_image)
+      .map((g) => g.app_id);
+
+    if (needsEnrichment.length > 0) {
+      enrich.mutate(needsEnrichment);
+    }
+  }, [gems?.length]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>

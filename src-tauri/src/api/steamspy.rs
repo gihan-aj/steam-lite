@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use reqwest::Client;
-use serde::{Deserialize};
-use crate::error::{AppError, Result};
 use crate::api::rate_limiter::RateLimiter;
+use crate::error::{AppError, Result};
+use reqwest::Client;
+use serde::Deserialize;
+use std::collections::HashMap;
 
 // ─────────────────────────────────────────────
 // API RESPONSE TYPES
@@ -37,7 +37,6 @@ pub struct SteamSpyGame {
     // The JSON key is "initialprice" but we want a clearer name in Rust.
     // serde(rename) maps the JSON key to our chosen field name.
     // This is like [JsonPropertyName] in C# System.Text.Json.
-
     /// Current price as a STRING in cents e.g. "999" = $9.99, "0" = Free
     #[serde(default)]
     pub price: String,
@@ -61,7 +60,7 @@ pub struct SteamSpyGame {
     pub languages: Option<String>,
 }
 
-impl SteamSpyGame{
+impl SteamSpyGame {
     /// Calculate the review score percentage (0.0 - 100.0)
     pub fn review_score(&self) -> f64 {
         let total = self.positive + self.negative;
@@ -75,7 +74,7 @@ impl SteamSpyGame{
     /// Returns None if the string is empty or "0" and it's the initial price
     pub fn price_cents(&self) -> Option<i64> {
         match self.price.parse::<i64>() {
-            Ok(0) => None,   // Free game
+            Ok(0) => None, // Free game
             Ok(p) => Some(p),
             Err(_) => None,
         }
@@ -120,7 +119,8 @@ impl SteamSpyGame{
         let mut sorted: Vec<(&String, &i64)> = tags.iter().collect();
         sorted.sort_by(|a, b| b.1.cmp(a.1)); // sort descending by vote count
 
-        sorted.into_iter()
+        sorted
+            .into_iter()
             .take(limit)
             .map(|(tag, _)| tag.clone())
             .collect()
@@ -143,7 +143,7 @@ pub struct SteamSpyClient {
     base_url: String,
 }
 
-impl SteamSpyClient{
+impl SteamSpyClient {
     pub fn new() -> Self {
         SteamSpyClient {
             client: Client::builder()
@@ -159,12 +159,12 @@ impl SteamSpyClient{
 
     /// Fetch the top 100 most-played games in the last two weeks.
     /// Great for discovering what's popular right now.
-    pub async fn get_top100_in_2weeks(&self, limiter: &RateLimiter,) -> Result<Vec<SteamSpyGame>> {
+    pub async fn get_top100_in_2weeks(&self, limiter: &RateLimiter) -> Result<Vec<SteamSpyGame>> {
         self.fetch_list("top100in2weeks", &[], limiter).await
     }
 
     /// Fetch the top 100 most-played games of all time.
-    pub async fn get_top100_forever(&self, limiter: &RateLimiter,) -> Result<Vec<SteamSpyGame>> {
+    pub async fn get_top100_forever(&self, limiter: &RateLimiter) -> Result<Vec<SteamSpyGame>> {
         self.fetch_list("top100forever", &[], limiter).await
     }
 
@@ -196,9 +196,14 @@ impl SteamSpyClient{
 
     /// Fetch one page of all games on Steam (1000 per page, starts at page 0).
     /// Rate limit: 1 request per MINUTE for this endpoint.
-    pub async fn get_all_page(&self, page: u32, limiter: &RateLimiter,) -> Result<Vec<SteamSpyGame>> {
+    pub async fn get_all_page(
+        &self,
+        page: u32,
+        limiter: &RateLimiter,
+    ) -> Result<Vec<SteamSpyGame>> {
         let page_str = page.to_string();
-        self.fetch_list("all", &[("page", &page_str)], limiter).await
+        self.fetch_list("all", &[("page", &page_str)], limiter)
+            .await
     }
 
     // ─────────────────────────────────────────────
@@ -214,7 +219,7 @@ impl SteamSpyClient{
         &self,
         request_type: &str,
         extra_params: &[(&str, &str)],
-        limiter: &RateLimiter
+        limiter: &RateLimiter,
     ) -> Result<Vec<SteamSpyGame>> {
         limiter.acquire().await;
         // Build query params: always include `request`, then any extras

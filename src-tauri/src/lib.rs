@@ -190,6 +190,7 @@ pub fn run() {
             commands::discover::start_crawl,
             commands::discover::stop_crawl,
             commands::discover::get_hidden_gems,
+            commands::discover::enrich_discover_games,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

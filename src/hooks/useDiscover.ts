@@ -134,11 +134,29 @@ export function useCrawlProgress() {
 
 export function useHiddenGems(limit: number = 100) {
   return useQuery({
-    queryKey: ['hidden_gems', limit],
-    queryFn:  () => {
-        console.log('Fetching hidden gems...')
-        return invoke<DiscoverGame[]>('get_hidden_gems', { limit });
+    queryKey: ["hidden_gems", limit],
+    queryFn: () => {
+      console.log("Fetching hidden gems...");
+      return invoke<DiscoverGame[]>("get_hidden_gems", { limit });
     },
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useEnrichDiscoverGames() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const unlisten = listen<{ app_id: number }>("game_enriched", () => {
+      queryClient.invalidateQueries({ queryKey: ["hidden_gems"] });
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [queryClient]);
+
+  return useMutation({
+    mutationFn: (appIds: number[]) =>
+      invoke<number>("enrich_discover_games", { appIds }),
   });
 }

@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State };
+use tauri::{AppHandle, Emitter, State };
 
 use crate::AppState;
 use crate::models::{CrawlState, CrawlStatus};
@@ -105,4 +105,62 @@ pub async fn get_hidden_gems(
     limit: i64,
 ) -> Result<Vec<crate::models::Game>, AppError> {
     state.games.get_hidden_gems(limit).await
+}
+
+/// Fetch Steam appdetails for games that don't have images yet.
+/// Called by React when the Discover page loads.
+/// Returns how many games were enriched.
+#[tauri::command]
+pub async fn enrich_discover_games(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    app_ids: Vec<i64>,
+) -> Result<usize, AppError>{
+    let settings = state.settings.load().await?;
+    let country = settings.country_code.clone();
+    let mut enriched = 0;
+
+    for app_id in &app_ids {
+        // Skip if already has image
+        if let Ok(Some(game)) = state.games.get_by_id(*app_id).await {
+            if game.header_image.is_some() {
+                continue;
+            }
+        }
+
+        state.limits.steam_store.acquire().await;
+
+        if let Ok(Some(details)) = state.steam.get_app_details(*app_id, &country).await {
+            if let Ok(Some(mut game)) = state.games.get_by_id(*app_id).await {
+                game.header_image = Some(details.header_image.clone())
+                    .filter(|s| !s.is_empty());
+
+                game.short_desc = Some(details.short_description.clone())
+                    .filter(|s| !s.is_empty());
+
+                let genres: Vec<String> = details.genres
+                    .iter()
+                    .map(|g| g.description.clone())
+                    .collect();
+
+                game.genres = serde_json::to_string(&genres).ok();
+                game.is_indie = details.is_indie();
+
+                // Update price with regional data
+                if let Some(price) = &details.price_overview {
+                    game.price_current  = Some(price.final_price);
+                    game.price_original = Some(price.initial);
+                }
+
+                let _ = state.games.upsert(&game).await;
+                enriched += 1;
+
+                let _ = app.emit("game_enriched", serde_json::json!({
+                    "app_id": app_id,
+                }));
+            }
+        }
+    }
+    tracing::info!(enriched, "Discover enrichment complete");
+    Ok(enriched)
 }
