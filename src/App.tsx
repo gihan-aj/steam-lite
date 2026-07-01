@@ -58,7 +58,11 @@ function AppShell() {
       <TitleBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar current={currentPage} onChange={setCurrentPage} />
-        <main className="flex-1 overflow-hidden">{pages[currentPage]}</main>
+        <main className="flex-1 overflow-hidden">
+          <div key={currentPage} className="page-transition h-full">
+            {pages[currentPage]}
+          </div>
+        </main>
       </div>
     </div>
   );
