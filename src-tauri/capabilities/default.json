@@ -13,6 +13,7 @@
     "core:path:allow-resolve-directory",
     "core:path:allow-dirname",
     "updater:default",
-    "process:default"
+    "process:default",
+    "dialog:allow-ask"
   ]
 }
