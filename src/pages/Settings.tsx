@@ -3,7 +3,23 @@ import { useSettings, useSaveSettings } from "../hooks/useSettings";
 import { UserSettings } from "../types";
 import { CountrySelect } from "../components/CountrySelect";
 
-export function Settings() {
+interface SettingsUpdateProps {
+  currentVersion: string | null;
+  updateAvailable: boolean;
+  updateVersion: string | null;
+  updateDownloading: boolean;
+  updateProgress: number;
+  onCheckUpdate: () => void;
+}
+
+export function Settings({
+  currentVersion,
+  updateAvailable,
+  updateVersion,
+  updateDownloading,
+  updateProgress,
+  onCheckUpdate,
+}: SettingsUpdateProps) {
   const { data: settings, isLoading } = useSettings();
   const save = useSaveSettings();
 
@@ -16,6 +32,7 @@ export function Settings() {
     min_review_score: 90,
     min_discount_percent: 50,
     sync_interval_hours: 24,
+    last_synced_at: null,
     alert_threshold_percent: 50,
   });
 
@@ -273,6 +290,90 @@ export function Settings() {
               </span>
             )}
           </div>
+
+          <Section title="About">
+            <Field label="Version">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span style={{ fontSize: 13, color: "#9096a8" }}>
+                  Steam Lite {currentVersion ? `v${currentVersion}` : "…"}
+                </span>
+
+                {updateAvailable ? (
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    {updateDownloading ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 80,
+                            height: 4,
+                            background: "#1a1d28",
+                            borderRadius: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${updateProgress}%`,
+                              background: "#3d6ef8",
+                              borderRadius: 2,
+                              transition: "width 0.3s ease",
+                            }}
+                          />
+                        </div>
+                        <span style={{ fontSize: 12, color: "#3d6ef8" }}>
+                          {updateProgress}%
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#4ade80",
+                          background: "#14291e",
+                          border: "1px solid #16a34a",
+                          padding: "3px 10px",
+                          borderRadius: 5,
+                        }}
+                      >
+                        v{updateVersion} available
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={onCheckUpdate}
+                    style={{
+                      fontSize: 12,
+                      color: "#5a5f72",
+                      background: "transparent",
+                      border: "1px solid #2a2d3a",
+                      borderRadius: 5,
+                      padding: "3px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Check for updates
+                  </button>
+                )}
+              </div>
+            </Field>
+          </Section>
         </div>
       </div>
     </div>

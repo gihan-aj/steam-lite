@@ -76,3 +76,7 @@ body {
     opacity: 0.3;
   }
 }
+
+button:hover .nav-tooltip {
+  opacity: 1 !important;
+}

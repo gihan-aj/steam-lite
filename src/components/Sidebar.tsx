@@ -1,8 +1,16 @@
 export type Page = "discover" | "wishlist" | "deals" | "settings";
 
+export interface NavItem {
+  id: Page;
+  icon: string;
+  label: string;
+  badge?: boolean;
+}
+
 interface SidebarProps {
   current: Page;
   onChange: (page: Page) => void;
+  navItems: NavItem[];
 }
 
 const items: { id: Page; icon: string; label: string }[] = [
@@ -12,7 +20,7 @@ const items: { id: Page; icon: string; label: string }[] = [
   { id: "settings", icon: "⚙️", label: "Settings" },
 ];
 
-export function Sidebar({ current, onChange }: SidebarProps) {
+export function Sidebar({ current, onChange, navItems }: SidebarProps) {
   return (
     <aside
       className="flex flex-col items-center py-3 gap-1 shrink-0"
@@ -20,7 +28,7 @@ export function Sidebar({ current, onChange }: SidebarProps) {
         width: 56,
         background: "#13141a",
         borderRight: "1px solid #1a1d28",
-        paddingTop: "0.6rem"
+        paddingTop: "0.6rem",
       }}
     >
       {/* Logo mark */}
@@ -40,10 +48,10 @@ export function Sidebar({ current, onChange }: SidebarProps) {
       </div>
 
       {/* Nav items */}
-      {items.map((item) => (
-        <NavItem
+      {navItems.map((item) => (
+        <NavItemButton
           key={item.id}
-          {...item}
+          item={item}
           active={current === item.id}
           onClick={() => onChange(item.id)}
         />
@@ -52,59 +60,95 @@ export function Sidebar({ current, onChange }: SidebarProps) {
   );
 }
 
-function NavItem({
-  icon,
-  label,
+function NavItemButton({
+  item,
   active,
   onClick,
 }: {
-  icon: string;
-  label: string;
+  item: NavItem;
   active: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      title={label}
-      className="w-10 h-10 rounded-xl flex items-center justify-center
-                 transition-all relative group"
+      title={item.label}
       style={{
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         background: active ? "#1e2540" : "transparent",
+        border: "none",
         fontSize: 18,
+        cursor: "pointer",
+        position: "relative",
+        transition: "background 0.1s",
       }}
       onMouseEnter={(e) => {
         if (!active)
-          (e.currentTarget as HTMLButtonElement).style.background = "#1a1d28";
+          (e.currentTarget as HTMLElement).style.background = "#1a1d28";
       }}
       onMouseLeave={(e) => {
         if (!active)
-          (e.currentTarget as HTMLButtonElement).style.background =
-            "transparent";
+          (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
-      {/* Active indicator bar */}
+      {/* Active indicator */}
       {active && (
         <span
-          className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r-full"
-          style={{ background: "#3d6ef8" }}
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 8,
+            bottom: 8,
+            width: 2,
+            borderRadius: "0 2px 2px 0",
+            background: "#3d6ef8",
+          }}
         />
       )}
-      {icon}
 
-      {/* Tooltip on hover */}
+      {item.icon}
+
+      {/* Badge dot — update notification etc. */}
+      {item.badge && (
+        <span
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 4,
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: "#4ade80",
+            border: "2px solid #13141a",
+          }}
+        />
+      )}
+
+      {/* Tooltip */}
       <span
-        className="absolute left-12 px-2 py-1 rounded text-xs font-medium
-                   pointer-events-none opacity-0 group-hover:opacity-100
-                   transition-opacity whitespace-nowrap z-50"
         style={{
+          position: "absolute",
+          left: 48,
           background: "#242736",
-          color: "#e0e2e8",
           border: "1px solid #2a2d3a",
+          color: "#e0e2e8",
           fontSize: 12,
+          padding: "3px 8px",
+          borderRadius: 6,
+          whiteSpace: "nowrap",
+          pointerEvents: "none",
+          opacity: 0,
+          transition: "opacity 0.15s",
+          zIndex: 100,
         }}
+        className="nav-tooltip"
       >
-        {label}
+        {item.label}
       </span>
     </button>
   );
