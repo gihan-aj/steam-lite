@@ -132,7 +132,7 @@ export function GameDetailPanel({
         ref={panelRef}
         style={{
           position: "fixed",
-          top: 36, // below titlebar
+          top: 0, // below titlebar
           right: 0,
           bottom: 0,
           width: 420,

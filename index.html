@@ -6,9 +6,76 @@
   <link rel="icon" type="image/png" href="/steam-lite-logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Steam Lite</title>
+  <style>
+    html,
+    body {
+      background: #0e0f13;
+    }
+  </style>
 </head>
 
+
 <body>
+  <style>
+    html,
+    body {
+      background: #0e0f13;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: #0e0f13;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 9999;
+      /* auto-fade after 1.2s, then remove from flow */
+      animation: splash-out 0.5s ease 1.2s both;
+      pointer-events: none;
+    }
+
+    #splash img {
+      width: 100px;
+      height: 100px;
+      border-radius: 16px;
+      animation: splash-logo 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    #splash span {
+      color: #9096a8;
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      animation: splash-logo 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+    }
+
+    @keyframes splash-logo {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes splash-out {
+      to {
+        opacity: 0;
+      }
+    }
+  </style>
+  <!-- Splash — rendered before React, auto-fades out -->
+  <div id="splash">
+    <img src="/steam-lite-logo.png" alt="" draggable="false" />
+    <span>STEAM LITE</span>
+  </div>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
