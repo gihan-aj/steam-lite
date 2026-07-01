@@ -20,6 +20,8 @@ use db::{
 };
 use tokio::sync::watch;
 
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
 use crate::api::itad::ItadClient;
 use crate::api::steam::SteamClient;
 use crate::api::steamspy::SteamSpyClient;
@@ -44,20 +46,7 @@ pub struct AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // 🦀 RUST LESSON: tracing subscriber
-    // tracing is Rust's structured logging framework — like Serilog in .NET.
-    // The subscriber is what actually processes log records.
-    // EnvFilter reads RUST_LOG env var: RUST_LOG=steam_lite=debug cargo run
-    // Default here: show info and above from our crate, warn from dependencies.
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "steam_lite=info,warn".into()),
-        )
-        .with_target(false) //   Don't show module path
-        .with_thread_ids(false)
-        .compact()
-        .init();
+    setup_logging();
 
     tracing::info!("Steam Lite starting up");
 
@@ -68,9 +57,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let db_pool = tauri::async_runtime::block_on(async {
-                // Gets the app's data directory — on Windows this is:
                 // C:\Users\{name}\AppData\Roaming\{app-name}\
-                // This is the correct place to store user data on all platforms.
                 let app_data_dir = app
                     .path()
                     .app_data_dir()
@@ -227,6 +214,8 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::set_setting,
             commands::settings::save_settings,
+            commands::settings::get_log_path,
+            commands::settings::open_log_folder,
             commands::wishlist::fetch_wishlist,
             commands::wishlist::get_wishlist,
             commands::wishlist::remove_from_wishlist,
@@ -243,4 +232,50 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn setup_logging() {
+    // On Windows: C:\Users\{user}\AppData\Roaming\steam-lite\logs\
+    // On macOS:   ~/Library/Application Support/steam-lite/logs/
+    // On Linux:   ~/.local/share/steam-lite/logs/
+    let log_dir = dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("steam-lite")
+        .join("logs");
+
+    std::fs::create_dir_all(&log_dir)
+        .expect("Failed to create log directory");
+
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "steam-lite.log");
+    let (file_writer, _guard) = tracing_appender::non_blocking(file_appender);
+
+    // Leak it intentionally — it lives for the whole process lifetime
+    std::mem::forget(_guard);
+
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("steam_lite=info,warn"));
+
+    // File layer — writes structured logs to disk
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_writer)
+        .with_ansi(false)        // no colour codes in log files
+        .with_target(true)       // include module path
+        .with_thread_ids(false)
+        .compact();
+
+    // Console layer — only in debug builds (dev mode)
+    #[cfg(debug_assertions)]
+    let console_layer = Some(
+        tracing_subscriber::fmt::layer()
+            .with_target(false)
+            .compact()
+    );
+    #[cfg(not(debug_assertions))]
+    let console_layer: Option<tracing_subscriber::fmt::Layer<_>> = None;
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(file_layer)
+        .with(console_layer)
+        .init();
 }

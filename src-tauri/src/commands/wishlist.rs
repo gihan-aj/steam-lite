@@ -23,28 +23,42 @@ pub async fn fetch_wishlist(
     // Load Steam ID from settings
     let settings = state.settings.load().await?;
 
-    let steam_id = settings.steam_id.ok_or_else(|| {
-        AppError::NotFound(
-            "Steam ID not set. Please add your Steam ID in Settings.".to_string()
-        )
-    })?;
+    let steam_id = match settings.steam_id.as_ref() {
+        Some(id) if !id.is_empty() => {
+            tracing::info!(steam_id = %id, "Fetching wishlist");
+            id.clone()
+        }
+        _ => {
+            tracing::warn!("Wishlist fetch failed: no Steam ID configured");
+            return Err(AppError::NotFound("Steam ID not set.".into()));
+        }
+    };
 
-     let api_key = settings.steam_api_key.ok_or_else(||
-        AppError::NotFound("Steam API key not set. Add it in Settings.".to_string())
-    )?;
+    let api_key = match settings.steam_api_key.as_ref() {
+        Some(k) if !k.is_empty() => k.clone(),
+        _ => {
+            tracing::warn!("Wishlist fetch failed: no Steam API key configured");
+            return Err(AppError::NotFound("Steam API key not set.".into()));
+        }
+    };
 
     let country_code = &settings.country_code.as_str();
+    tracing::info!(country = %country_code, "Using country code for wishlist fetch");
 
-    tracing::info!(steam_id = %steam_id, "Fetching wishlist from Steam");
-
-    // Fetch from Steam
-    let raw_items = state.steam
-        .get_full_wishlist(
-            &steam_id, 
-            &api_key, 
-            &country_code,
-            &state.limits.steam_store
-        ).await?;
+    tracing::info!("Calling Steam API for wishlist IDs");
+    let raw_items = match state.steam
+        .get_full_wishlist(&steam_id, &api_key, &country_code, &state.limits.steam_store)
+        .await
+    {
+        Ok(items) => {
+            tracing::info!(count = items.len(), "Steam wishlist fetched successfully");
+            items
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to fetch wishlist from Steam");
+            return Err(e);
+        }
+    };
 
     let fetched_ids: Vec<i64> = raw_items.iter().map(|(id, _, _)| *id).collect();
 

@@ -5,15 +5,27 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+
     "opener:default",
+
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-start-dragging",
+
     "core:path:allow-resolve-directory",
     "core:path:allow-dirname",
+
     "updater:default",
+    "updater:allow-download-and-install",
+    "updater:allow-check",
+
     "process:default",
-    "dialog:allow-ask"
+    "process:allow-exit",
+    "process:allow-restart",
+
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
+    "dialog:allow-message"
   ]
 }

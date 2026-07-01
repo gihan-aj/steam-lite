@@ -1,4 +1,5 @@
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_opener::OpenerExt;
 use crate::AppState;
 use crate::models::UserSettings;
 use crate::error::AppError;
@@ -32,4 +33,30 @@ pub async fn save_settings(
     settings: UserSettings,
 ) -> Result<(), AppError> {
     state.settings.save(&settings).await
+}
+
+/// Returns the path to the log directory so the user can find logs.
+#[tauri::command]
+pub async fn get_log_path() -> Result<String, AppError> {
+    let log_dir = dirs::data_dir()
+        .ok_or_else(|| AppError::NotFound("Could not find app data directory".into()))?
+        .join("steam-lite")
+        .join("logs");
+
+    Ok(log_dir.to_string_lossy().to_string())
+}
+
+/// Open the log directory in the system file explorer.
+#[tauri::command]
+pub async fn open_log_folder(app: AppHandle) -> Result<(), AppError> {
+    let log_dir = dirs::data_dir()
+        .ok_or_else(|| AppError::NotFound("Could not find app data directory".into()))?
+        .join("steam-lite")
+        .join("logs");
+
+    // Use the opener plugin to open the folder
+    app.opener().open_path(log_dir.to_string_lossy().as_ref(), None::<&str>)
+        .map_err(|e| AppError::Internal(anyhow::anyhow!("Failed to open folder: {}", e)))?;
+
+    Ok(())
 }

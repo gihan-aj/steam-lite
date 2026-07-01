@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSettings, useSaveSettings } from "../hooks/useSettings";
 import { UserSettings } from "../types";
 import { CountrySelect } from "../components/CountrySelect";
+import { invoke } from "@tauri-apps/api/core";
 
 interface SettingsUpdateProps {
   currentVersion: string | null;
@@ -35,6 +36,14 @@ export function Settings({
     last_synced_at: null,
     alert_threshold_percent: 50,
   });
+
+  const [logPath, setLogPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke<string>("get_log_path")
+      .then(setLogPath)
+      .catch(() => {});
+  }, []);
 
   // Populate form when settings load
   useEffect(() => {
@@ -371,6 +380,46 @@ export function Settings({
                     Check for updates
                   </button>
                 )}
+              </div>
+            </Field>
+
+            <Field label="Log files">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "#5a5f72",
+                    fontFamily: "monospace",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    maxWidth: 260,
+                  }}
+                >
+                  {logPath ?? "Locating..."}
+                </span>
+                <button
+                  onClick={() => invoke("open_log_folder")}
+                  style={{
+                    fontSize: 12,
+                    color: "#5a5f72",
+                    background: "transparent",
+                    border: "1px solid #2a2d3a",
+                    borderRadius: 5,
+                    padding: "3px 10px",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    marginLeft: 8,
+                  }}
+                >
+                  Open folder
+                </button>
               </div>
             </Field>
           </Section>
