@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "notes": "First release of Steam Lite.\n\n- Wishlist price tracking with regional pricing (LK)\n- Hidden gem discovery\n- Price history and sale pattern analysis\n- Background sync",
+  "pub_date": "2026-07-01T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTOGw2ejZaSFdpVm9UY2d3QVBOcjQrbEdBc0tmMnloRzRaSksrKzh4d2NXVW05K0VHV3VEUklzdHJteXlpZiswZmhhdGFOMmNKNW1ib1A1WXpRQWxHRzBpL1Y0ZDBBTkE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyOTAwODk5CWZpbGU6c3RlYW0tbGl0ZV8wLjEuMF94NjRfZW4tVVMubXNpCjdSZW81WmZTVVNYbWdTMmcrSEpsdVE1c1dmMXpVYWdaem81eklEcEZFVlFRWWNmVDNPRzErMExDRjhrSWNtRC9kQjZGbVRXN2RUVVY3cGhrK0toc0RBPT0K",
+      "url": "https://github.com/gihan-aj/steam-lite/releases/download/v0.1.0/steam-lite_0.1.0_x64-setup.exe"
+    }
+  }
+}

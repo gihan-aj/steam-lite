@@ -13,7 +13,7 @@ import { DiscoverGameCard } from "../components/DiscoverGameCard";
 import { SkeletonGrid } from "../components/SkeletonCard";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
 
-const PAGE_SIZE = 30;
+// const PAGE_SIZE = 30;
 
 export function Discover() {
   const [minScore, setMinScore] = useState(85);

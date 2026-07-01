@@ -13,12 +13,12 @@ interface SidebarProps {
   navItems: NavItem[];
 }
 
-const items: { id: Page; icon: string; label: string }[] = [
-  { id: "discover", icon: "🔥", label: "Discover" },
-  { id: "wishlist", icon: "❤️", label: "Wishlist" },
-  { id: "deals", icon: "🏷️", label: "Deals" },
-  { id: "settings", icon: "⚙️", label: "Settings" },
-];
+// const items: { id: Page; icon: string; label: string }[] = [
+//   { id: "discover", icon: "🔥", label: "Discover" },
+//   { id: "wishlist", icon: "❤️", label: "Wishlist" },
+//   { id: "deals", icon: "🏷️", label: "Deals" },
+//   { id: "settings", icon: "⚙️", label: "Settings" },
+// ];
 
 export function Sidebar({ current, onChange, navItems }: SidebarProps) {
   return (

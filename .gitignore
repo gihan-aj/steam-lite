@@ -26,5 +26,6 @@ dist-ssr
 .continue/config.yaml
 .vscode/mcp.json
 
+.env
 
-
+build.ps1
