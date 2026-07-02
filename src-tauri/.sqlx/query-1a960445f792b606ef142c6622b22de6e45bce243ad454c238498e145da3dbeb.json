@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                app_id, price, discount_percent,\n                recorded_at as \"recorded_at: chrono::DateTime<chrono::Utc>\",\n                source\n            FROM price_history\n            WHERE app_id = ?\n            ORDER BY recorded_at DESC\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "app_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "price_history",
+            "name": "app_id"
+          }
+        }
+      },
+      {
+        "name": "price",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "price_history",
+            "name": "price"
+          }
+        }
+      },
+      {
+        "name": "discount_percent",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "price_history",
+            "name": "discount_percent"
+          }
+        }
+      },
+      {
+        "name": "recorded_at: chrono::DateTime<chrono::Utc>",
+        "ordinal": 3,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "price_history",
+            "name": "recorded_at"
+          }
+        }
+      },
+      {
+        "name": "source",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "price_history",
+            "name": "source"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1a960445f792b606ef142c6622b22de6e45bce243ad454c238498e145da3dbeb"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR REPLACE INTO wishlist (\n                app_id, name, review_summary, reviews_percent,\n                reviews_total, date_added, current_price, original_price,\n                historical_low, discount_percent, header_image, short_description,\n                steam_historical_cut, steam_historical_date,\n                all_time_low_cut, all_time_low_shop, all_time_low_date,\n                predicted_regional_low, is_at_regional_low,\n                steam_review_score, steam_review_count, review_label,\n                opencritic_score, metacritic_score,\n                release_date, tags, developers, itad_id,\n                avg_sale_interval_days, typical_discount_min,\n                typical_discount_max, last_sale_date, predicted_next_sale, itad_history_bootstrapped,\n                last_checked\n            ) VALUES (\n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,\n                ?, ?, ?, ?, ?, ?, ?,\n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,\n                CURRENT_TIMESTAMP\n            )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 34
+    },
+    "nullable": []
+  },
+  "hash": "de286dacd486ea9fe0dad330bc0686e8abcd4e1f4a172d15a3598c0d4b1fadae"
+}

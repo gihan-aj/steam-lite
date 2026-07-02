@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO crawl_state (key, value) VALUES ('games_indexed', ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "31b7125709c821f45fb75735c934b8fb520496abf0713a90312cc7bbe2e39c57"
+}

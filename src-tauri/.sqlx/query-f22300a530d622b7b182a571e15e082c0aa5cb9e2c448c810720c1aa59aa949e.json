@@ -1,0 +1,422 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                app_id, name, review_summary,\n                reviews_percent, reviews_total, date_added,\n                current_price, original_price, historical_low,\n                discount_percent, header_image, short_description,\n                steam_historical_cut, steam_historical_date,\n                all_time_low_cut, all_time_low_shop, all_time_low_date,\n                predicted_regional_low, is_at_regional_low,\n                steam_review_score, steam_review_count, review_label,\n                opencritic_score, metacritic_score,\n                release_date, tags, developers, itad_id,\n                avg_sale_interval_days, typical_discount_min,\n                typical_discount_max, last_sale_date, predicted_next_sale, itad_history_bootstrapped\n            FROM wishlist\n            WHERE app_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "app_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "app_id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "review_summary",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "review_summary"
+          }
+        }
+      },
+      {
+        "name": "reviews_percent",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "reviews_percent"
+          }
+        }
+      },
+      {
+        "name": "reviews_total",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "reviews_total"
+          }
+        }
+      },
+      {
+        "name": "date_added",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "date_added"
+          }
+        }
+      },
+      {
+        "name": "current_price",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "current_price"
+          }
+        }
+      },
+      {
+        "name": "original_price",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "original_price"
+          }
+        }
+      },
+      {
+        "name": "historical_low",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "historical_low"
+          }
+        }
+      },
+      {
+        "name": "discount_percent",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "discount_percent"
+          }
+        }
+      },
+      {
+        "name": "header_image",
+        "ordinal": 10,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "header_image"
+          }
+        }
+      },
+      {
+        "name": "short_description",
+        "ordinal": 11,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "short_description"
+          }
+        }
+      },
+      {
+        "name": "steam_historical_cut",
+        "ordinal": 12,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "steam_historical_cut"
+          }
+        }
+      },
+      {
+        "name": "steam_historical_date",
+        "ordinal": 13,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "steam_historical_date"
+          }
+        }
+      },
+      {
+        "name": "all_time_low_cut",
+        "ordinal": 14,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "all_time_low_cut"
+          }
+        }
+      },
+      {
+        "name": "all_time_low_shop",
+        "ordinal": 15,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "all_time_low_shop"
+          }
+        }
+      },
+      {
+        "name": "all_time_low_date",
+        "ordinal": 16,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "all_time_low_date"
+          }
+        }
+      },
+      {
+        "name": "predicted_regional_low",
+        "ordinal": 17,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "predicted_regional_low"
+          }
+        }
+      },
+      {
+        "name": "is_at_regional_low",
+        "ordinal": 18,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "is_at_regional_low"
+          }
+        }
+      },
+      {
+        "name": "steam_review_score",
+        "ordinal": 19,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "steam_review_score"
+          }
+        }
+      },
+      {
+        "name": "steam_review_count",
+        "ordinal": 20,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "steam_review_count"
+          }
+        }
+      },
+      {
+        "name": "review_label",
+        "ordinal": 21,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "review_label"
+          }
+        }
+      },
+      {
+        "name": "opencritic_score",
+        "ordinal": 22,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "opencritic_score"
+          }
+        }
+      },
+      {
+        "name": "metacritic_score",
+        "ordinal": 23,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "metacritic_score"
+          }
+        }
+      },
+      {
+        "name": "release_date",
+        "ordinal": 24,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "release_date"
+          }
+        }
+      },
+      {
+        "name": "tags",
+        "ordinal": 25,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "tags"
+          }
+        }
+      },
+      {
+        "name": "developers",
+        "ordinal": 26,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "developers"
+          }
+        }
+      },
+      {
+        "name": "itad_id",
+        "ordinal": 27,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "itad_id"
+          }
+        }
+      },
+      {
+        "name": "avg_sale_interval_days",
+        "ordinal": 28,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "avg_sale_interval_days"
+          }
+        }
+      },
+      {
+        "name": "typical_discount_min",
+        "ordinal": 29,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "typical_discount_min"
+          }
+        }
+      },
+      {
+        "name": "typical_discount_max",
+        "ordinal": 30,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "typical_discount_max"
+          }
+        }
+      },
+      {
+        "name": "last_sale_date",
+        "ordinal": 31,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "last_sale_date"
+          }
+        }
+      },
+      {
+        "name": "predicted_next_sale",
+        "ordinal": 32,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "predicted_next_sale"
+          }
+        }
+      },
+      {
+        "name": "itad_history_bootstrapped",
+        "ordinal": 33,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "itad_history_bootstrapped"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "f22300a530d622b7b182a571e15e082c0aa5cb9e2c448c810720c1aa59aa949e"
+}

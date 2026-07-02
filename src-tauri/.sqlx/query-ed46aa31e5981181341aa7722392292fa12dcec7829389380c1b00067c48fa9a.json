@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR IGNORE INTO price_history (app_id, price, discount_percent, recorded_at, source)\n            VALUES (?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "ed46aa31e5981181341aa7722392292fa12dcec7829389380c1b00067c48fa9a"
+}

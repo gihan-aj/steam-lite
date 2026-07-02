@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO crawl_state (key, value) VALUES ('current_page', ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "d7b6fe15d2aa2ad5e8c6af67e2f96eb90467a9ea22fd20a6fea6a7e36ce000a9"
+}

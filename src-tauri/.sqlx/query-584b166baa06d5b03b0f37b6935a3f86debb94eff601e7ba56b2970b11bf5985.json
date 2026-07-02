@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                INSERT OR REPLACE INTO games (\n                    app_id, name, review_score, total_reviews,\n                    is_indie, price_current, price_original,\n                    platform_windows, tags, last_updated,\n                    gem_score, owners_lower, avg_playtime,\n                    crawl_source, header_image, short_desc, genres, last_price_check\n                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 18
+    },
+    "nullable": []
+  },
+  "hash": "584b166baa06d5b03b0f37b6935a3f86debb94eff601e7ba56b2970b11bf5985"
+}

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT app_id FROM wishlist",
+  "describe": {
+    "columns": [
+      {
+        "name": "app_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "wishlist",
+            "name": "app_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1d8d87abff8d8bd52cc311353a1730055ddac1c4573115af3e7413ae2358ec53"
+}
