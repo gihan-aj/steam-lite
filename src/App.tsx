@@ -10,6 +10,7 @@ import { TitleBar } from "./components/TitleBar";
 import { useSyncListener } from "./hooks/useWishlist";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useUpdater } from "./hooks/useUpdater";
+import { ToastProvider } from "./components/Toast";
 
 // Create the TanStack Query client — one instance for the whole app
 const queryClient = new QueryClient({
@@ -104,7 +105,9 @@ function AppShell() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      <ToastProvider>
+        <AppShell />
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
